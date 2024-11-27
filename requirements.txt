@@ -1,0 +1,9 @@
+groq
+google-generativeai<0.8.0
+protobuf>=3.20,<5.0
+python-dotenv
+streamlit>=1.32.0
+PyYAML
+PyPDF2
+PyMuPDF
+regex

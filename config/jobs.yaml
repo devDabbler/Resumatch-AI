@@ -1,0 +1,281 @@
+# Global scoring configuration
+scoring_config:
+  weights:
+    technical:
+      skills: 0.35
+      experience: 0.30
+      role_relevance: 0.25
+      us_market_fit: 0.10
+    managerial:
+      skills: 0.25
+      experience: 0.35
+      role_relevance: 0.25
+      us_market_fit: 0.15
+    default:
+      skills: 0.30
+      experience: 0.30
+      role_relevance: 0.20
+      us_market_fit: 0.20
+  thresholds:
+    strong_match: 80
+    good_match: 70
+    potential_match: 60
+    minimum_match: 50
+  experience_weights:
+    years_weight: 0.4
+    relevance_weight: 0.6
+  skill_weights:
+    required: 0.7
+    preferred: 0.3
+  analysis_patterns:
+    experience:
+      - '(\d+)\+?\s*years?.+experience'
+      - '(\d+)\+?\s*years?.+industry'
+      - 'experience\D*(\d+)\+?\s*years?'
+      - '(?:since|from)\s*(\d{4})'
+      - '(\d{4})\s*[-–]\s*(?:present|current|now|2024)'
+      - 'career\s+spanning\D*(\d+)\+?\s*years?'
+      - '(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{4})\s*[-–]\s*(?:Present|Current|Now)'
+      - '(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{4})\s*[-–]\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{4})'
+      - 'with\s+(\d+)\+?\s*years?\s+(?:of\s+)?experience'
+      - '(\d+)\+?\s*years?\s+(?:of\s+)?experience\s+in'
+      - 'Data\s+Scientist\s+with\s+(\d+)\+?\s*years'
+      - '(?:Bank of New York|BNY|PNC|Goldman Sachs|JPMorgan|Morgan Stanley|Wells Fargo|Citi|Capital One|Bank of America|USAA|Fidelity|Charles Schwab|Vanguard).*?(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{4})'
+      - '(?:Google|Amazon|Microsoft|Apple|Meta|Facebook|Netflix|Twitter|X Corp|LinkedIn|Salesforce|Adobe|Intel|AMD|NVIDIA|IBM|Oracle|SAP|VMware|Cisco).*?(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{4})'
+      - '(?:McKinsey|BCG|Bain|Deloitte|PwC|EY|KPMG|Accenture|Capgemini|Cognizant|Infosys|TCS|Wipro|HCL|Tech Mahindra).*?(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{4})'
+      - '(?:UnitedHealth|Anthem|Aetna|Cigna|Humana|Kaiser|Blue Cross|CVS Health|Optum|Epic|Cerner).*?(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{4})'
+      - '(?:Walmart|Target|Costco|Home Depot|Lowes|Best Buy|eBay|Shopify|Etsy|Wayfair).*?(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{4})'
+    skills:
+      python: '\b(?:python|py3|py2|python3)\b'
+      machine_learning: '\b(?:machine learning|ml|deep learning|dl|neural networks?|llms?|large language models?)\b'
+      statistics: '\b(?:statistics?|statistical|stats?|quantitative analysis|inference|linear regression|logistic regression|decision trees|random forests?|gradient boosting|xgboost)\b'
+      data_visualization: '\b(?:data viz|visualization|tableau|power\s*bi|matplotlib|seaborn|dashboards?)\b'
+      big_data: '\b(?:hadoop|spark|distributed computing|big data|data engineering|s3|lambda|sagemaker|bedrock)\b'
+      generative_ai: '\b(?:generative ai|llms?|large language models?|prompt engineering|rag|retrieval augmented generation|llama|mixtral)\b'
+      cloud: '\b(?:aws|amazon web services|s3|lambda|sagemaker|bedrock|gcp|azure)\b'
+    context:
+      - 'developed.{0,50}SKILL'
+      - 'implemented.{0,50}SKILL'
+      - 'using.{0,50}SKILL'
+      - 'experience.{0,50}SKILL'
+      - 'SKILL.{0,50}development'
+      - 'SKILL.{0,50}implementation'
+      - 'built.{0,50}SKILL'
+      - 'designed.{0,50}SKILL'
+      - 'led.{0,50}SKILL'
+      - 'optimized.{0,50}SKILL'
+      - 'trained.{0,50}SKILL'
+      - 'deployed.{0,50}SKILL'
+      - 'leveraging.{0,50}SKILL'
+      - 'utilized.{0,50}SKILL'
+      - 'employed.{0,50}SKILL'
+      - 'engineered.{0,50}SKILL'
+      - 'achieved.{0,50}SKILL'
+      - 'improved.{0,50}SKILL'
+
+job_roles:
+  "Data Scientist":
+    role_type: technical
+    scoring_weights: technical
+    min_years_experience: 3
+    required_skills:
+      - Python
+      - Machine Learning
+      - Deep Learning
+      - Statistics
+      - Time Series Regression
+      - Data Visualization
+      - Big Data
+    preferred_skills:
+      - TensorFlow
+      - PyTorch
+      - Scikit-learn
+      - Pandas
+      - NumPy
+      - LangChain
+      - Docker
+      - Kubernetes
+      - MLflow
+      - Databricks
+
+  "Software Development Engineer":
+    role_type: technical
+    scoring_weights: technical
+    min_years_experience: 4
+    required_skills:
+      - Python
+      - C++
+      - JavaScript
+      - Go
+      - Rust
+      - React
+      - Angular
+      - Node.js
+      - Docker
+      - Kubernetes
+      - AWS
+      - Azure
+      - Microservices
+    preferred_skills:
+      - TypeScript
+      - GraphQL
+      - Serverless
+
+  "Full Stack Software Engineer":
+    role_type: technical
+    scoring_weights: technical
+    min_years_experience: 4
+    required_skills:
+      - Javascript
+      - React
+      - Angular
+      - Node.js
+      - Docker
+      - Kubernetes
+      - AWS
+      - Azure
+      - Microservices
+    preferred_skills:
+      - Python
+      - TypeScript
+      - GraphQL
+      - Serverless
+
+  "UI Designer":
+    role_type: technical
+    scoring_weights: technical
+    min_years_experience: 4
+    required_skills:
+      - UI Design
+      - UX Design
+      - Figma
+      - Sketch
+      - Adobe XD
+      - InVision
+      - Prototyping
+      - Wireframing
+      - User Research
+      - Typography
+      - Color Theory
+    preferred_skills:
+      - HTML/CSS
+      - JavaScript
+      - Responsive Design
+
+  "Engagement Manager":
+    role_type: managerial
+    scoring_weights: managerial
+    min_years_experience: 5
+    required_skills:
+      - Client Relationship Management
+      - Project Management
+      - Marketing Analytics
+      - Sales Analytics
+      - Supply Chain Analytics
+      - Data Science
+      - AI
+      - Machine Learning
+    preferred_skills:
+      - Business Intelligence
+      - Data Visualization
+
+  "ML Ops Engineer, Model Risk Management & Governance":
+    role_type: technical
+    scoring_weights: technical
+    min_years_experience: 5
+    required_skills:
+      - Python
+      - R
+      - Scala
+      - Model Development
+      - Model Validation
+      - Model Monitoring
+      - Risk Management
+      - Compliance
+      - Documentation Automation
+    preferred_skills:
+      - TensorFlow
+      - PyTorch
+      - Scikit-learn
+
+  "Solutions Architect, Health & Life Sciences":
+    role_type: technical
+    scoring_weights: technical
+    min_years_experience: 10
+    required_skills:
+      - Solution Architecture
+      - Cloud Computing (AWS, Azure, or GCP)
+      - Backend Integrations
+      - Software Architecture Design
+      - Business Development
+      - Technical Leadership
+    preferred_skills:
+      - Healthcare IT
+      - Life Sciences IT
+
+  "AWS Platform Data Engineer":
+    role_type: technical
+    scoring_weights: technical
+    min_years_experience: 7
+    required_skills:
+      - AWS
+      - Databricks
+      - Terraform
+      - Infrastructure as Code (IaC)
+      - Python
+      - Bash
+      - PowerShell
+      - Cloud Security
+    preferred_skills:
+      - Spark
+      - Kafka
+      - Airflow
+
+  "Site Reliability Engineer":
+    role_type: technical
+    scoring_weights: technical
+    min_years_experience: 6
+    required_skills:
+      - Jenkins
+      - Groovy
+      - Kubernetes
+      - Helm
+      - AWS
+      - GCP
+      - Azure
+      - Terraform
+      - CloudFormation
+      - Prometheus
+      - Grafana
+      - Bash
+      - Python
+      - CI/CD
+      - GitOps
+      - Networking
+      - Security
+    preferred_skills:
+      - Ansible
+      - Docker
+      - Istio
+      - Kibana
+      - ELK Stack
+
+  "Generative AI Architect":
+    role_type: technical
+    scoring_weights: technical
+    min_years_experience: 8
+    required_skills:
+      - MLOps
+      - AI Architecture
+      - Containerization
+      - Model Optimization
+      - Python
+      - Cloud Platforms (GCP, AWS, Azure)
+    preferred_skills:
+      - OpenAI API
+      - TensorFlow
+      - PyTorch
+      - RLHF
+      - Data Science
+      - ETL Pipeline Management
+      - Kubernetes
