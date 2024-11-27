@@ -1,0 +1,368 @@
+required_skills_match_threshold: 0.75  # Requiring 75% of required skills
+
+# Global scoring configuration
+scoring_config:
+  weights:
+    technical:
+      skills: 0.35
+      platform_specific_experience: 0.35
+      experience: 0.30
+      role_relevance: 0.25
+      us_market_fit: 0.10
+    managerial:
+      skills: 0.25
+      experience: 0.35
+      role_relevance: 0.25
+      us_market_fit: 0.15
+    default:
+      skills: 0.30
+      experience: 0.30
+      role_relevance: 0.20
+      us_market_fit: 0.20
+  thresholds:
+    strong_match: 85
+    good_match: 75
+    potential_match: 50
+    minimum_match: 35
+  experience_weights:
+    years_weight: 0.4
+    relevance_weight: 0.6
+    platform_specific_weight: 0.5
+  skill_weights:
+    required: 0.7        # Adjusted to give less weight to required skills
+    preferred: 0.3       # Increased weight for preferred skills
+  analysis_patterns:
+    experience:
+      - '(\d+)\+?\s*years?.+experience'
+      - '(\d+)\+?\s*years?.+industry'
+      - 'experience\D*(\d+)\+?\s*years?'
+      - 'career\s+spanning\D*(\d+)\+?\s*years?'
+      - 'with\s+(\d+)\+?\s*years?\s+(?:of\s+)?experience'
+      - '(\d+)\+?\s*years?\s+(?:of\s+)?experience\s+in'
+    skills:
+      python: '\b(?:python|py3|py2|python3)\b(?:\s+(?:development|implementation|experience))?'
+      machine_learning: '\b(?:machine learning|ml|deep learning|dl|neural networks?|llms?|large language models?)\b(?:\s+(?:development|implementation|experience))?'
+      statistics: '\b(?:statistics?|statistical|stats?|quantitative analysis|inference)\b(?:\s+(?:development|implementation|experience))?'
+      data_visualization: '\b(?:data viz|visualization|tableau|power\s*bi|matplotlib|seaborn|dashboards?)\b(?:\s+(?:development|implementation|experience))?'
+      big_data: '\b(?:hadoop|spark|distributed computing|big data|data engineering)\b(?:\s+(?:development|implementation|experience))?'
+      generative_ai: '\b(?:generative ai|llms?|large language models?|prompt engineering|rag)\b(?:\s+(?:development|implementation|experience))?'
+      cloud: '\b(?:aws|amazon web services|azure|gcp|google cloud)\b(?:\s+(?:development|implementation|architecture|experience))?'
+      google_cloud: '\b(?:google\s+cloud\s+platform|gcp)\b(?:\s*[-:])?\s*(?:\d+\s+years?|experience|certification|architect)'
+      bigquery: '\b(?:bigquery)\b(?:\s+(?:development|implementation|architecture|experience))?'
+      dataplex: '\b(?:dataplex)\b(?:\s+(?:development|implementation|architecture|experience))?'
+      dataflow: '\b(?:dataflow)\b(?:\s+(?:development|pipeline|architecture|experience))?'
+      dataproc: '\b(?:dataproc)\b(?:\s+(?:development|implementation|architecture|experience))?'
+      vertex_ai: '\b(?:vertex\s*ai)\b(?:\s+(?:development|implementation|deployment|experience))?'
+      dbt: '\b(?:dbt|data\s+build\s+tool)\b(?:\s+(?:development|implementation|experience))?'
+      solution_architecture: '\b(?:solution\s+architect|solutions?\s+architecture)\b(?:\s+(?:experience|implementation|design))?'
+      data_engineering: '\b(?:data\s+engineer|data\s+engineering)\b(?:\s+(?:experience|implementation|development))?'
+      etl: '\b(?:etl|elt|data\s+pipeline)\b(?:\s+(?:development|implementation|experience))?'
+      data_governance: '\b(?:data\s+governance|data\s+quality|data\s+validation)\b(?:\s+(?:experience|implementation))?'
+      real_time_processing: '\b(?:real[-\s]time\s+(?:processing|streaming|analytics))\b(?:\s+(?:experience|implementation))?'
+      data_modeling: '\b(?:data\s+model(?:ing)?)\b(?:\s+(?:experience|implementation|development))?'
+      sql: '\b(?:sql|mysql|postgresql|oracle)\b(?:\s+(?:development|implementation|experience))?'
+      bi_integration: '\b(?:business\s+intelligence|bi\s+integration|bi\s+tools)\b(?:\s+(?:experience|implementation))?'
+      security_compliance: '\b(?:security|compliance|governance)\b(?:\s+(?:experience|implementation))?'
+    context:
+      - 'developed.{0,50}SKILL'
+      - 'implemented.{0,50}SKILL'
+      - 'using.{0,50}SKILL'
+      - 'experience.{0,50}SKILL'
+      - 'SKILL.{0,50}development'
+      - 'SKILL.{0,50}implementation'
+      - 'built.{0,50}SKILL'
+      - 'designed.{0,50}SKILL'
+      - 'led.{0,50}SKILL'
+      - 'optimized.{0,50}SKILL'
+      - 'trained.{0,50}SKILL'
+      - 'deployed.{0,50}SKILL'
+      - 'leveraging.{0,50}SKILL'
+      - 'utilized.{0,50}SKILL'
+      - 'employed.{0,50}SKILL'
+      - 'engineered.{0,50}SKILL'
+      - 'achieved.{0,50}SKILL'
+      - 'improved.{0,50}SKILL'
+      - 'designed\s+(?:and|&)?\s*implemented.{0,50}SKILL'
+      - 'architected.{0,50}SKILL.{0,50}solution'
+      - 'SKILL.{0,50}architecture'
+      - 'SKILL.{0,50}implementation'
+      - 'led.{0,50}SKILL.{0,50}(?:development|architecture)'
+
+job_roles:
+  "Data Scientist":
+    role_type: technical
+    scoring_weights: technical
+    min_years_experience: 4
+    scoring_constraints:
+      max_score: 100
+      required_skills_threshold: 0.5  # Lowered threshold
+    required_skills:
+      - Python
+      - Machine Learning
+      - Deep Learning
+      - Statistics
+      - Time Series Regression
+      - Data Visualization
+      - Big Data
+    preferred_skills:
+      - TensorFlow
+      - PyTorch
+      - Scikit-learn
+      - Pandas
+      - NumPy
+      - LangChain
+      - Docker
+      - Kubernetes
+      - MLflow
+      - Databricks
+
+  "Software Development Engineer":
+    role_type: technical
+    scoring_weights: technical
+    min_years_experience: 4
+    scoring_constraints:
+      max_score: 100
+      required_skills_threshold: 0.5
+    required_skills:
+      - Python
+      - C++
+      - JavaScript
+      - Go
+      - Rust
+      - React
+      - Angular
+      - Node.js
+      - Docker
+      - Kubernetes
+      - AWS
+      - Azure
+      - Microservices
+    preferred_skills:
+      - TypeScript
+      - GraphQL
+      - Serverless
+
+  "Solutions Architect, ANZ, Australia":
+    role_type: technical
+    scoring_weights: technical
+    min_years_experience: 15
+    scoring_constraints:
+      max_score: 35
+      required_skills_threshold: 0.5
+      platform_specific_requirements:
+        - google_cloud
+        - bigquery
+        - dataplex
+        - dataflow
+        - dataproc
+      minimum_platform_skills: 3  # Lowered from 5
+    required_skills:
+      - Solution Architecture
+      - Data Engineering
+      - Google Cloud Platform
+      - Data Governance
+      - ETL/ELT Pipelines
+      - Data Validation
+      - Real-Time Data Processing
+      - Data Modeling
+      - Python
+      - SQL
+      - BigQuery
+      - DevOps Practices
+      - BI Integration
+      - Security & Compliance
+    preferred_skills:
+      - Dataplex
+      - Dataflow
+      - Dataproc
+      - Vertex AI
+      - Docker
+      - Kubernetes
+      - DBT
+      - Advanced Analytics
+
+  "Full Stack Software Engineer":
+    role_type: technical
+    scoring_weights: technical
+    min_years_experience: 4
+    scoring_constraints:
+      max_score: 100
+      required_skills_threshold: 0.4  # Lowered threshold for more balanced scoring
+    required_skills:
+      - JavaScript
+      - React
+      - Angular
+      - Node.js
+      - Docker
+      - Kubernetes
+      - AWS
+      - Azure
+      - Microservices
+    preferred_skills:
+      - Python
+      - TypeScript
+      - GraphQL
+      - Serverless
+
+  "UI Designer":
+    role_type: technical
+    scoring_weights: technical
+    min_years_experience: 4
+    scoring_constraints:
+      max_score: 100
+      required_skills_threshold: 0.5
+    required_skills:
+      - UI Design
+      - UX Design
+      - Figma
+      - Sketch
+      - Adobe XD
+      - InVision
+      - Prototyping
+      - Wireframing
+      - User Research
+      - Typography
+      - Color Theory
+    preferred_skills:
+      - HTML/CSS
+      - JavaScript
+      - Responsive Design
+
+  "Engagement Manager":
+    role_type: managerial
+    scoring_weights: managerial
+    min_years_experience: 5
+    scoring_constraints:
+      max_score: 100
+      required_skills_threshold: 0.5
+    required_skills:
+      - Client Relationship Management
+      - Project Management
+      - Marketing Analytics
+      - Sales Analytics
+      - Supply Chain Analytics
+      - Data Science
+      - AI
+      - Machine Learning
+    preferred_skills:
+      - Business Intelligence
+      - Data Visualization
+
+  "ML Ops Engineer, Model Risk Management & Governance":
+    role_type: technical
+    scoring_weights: technical
+    min_years_experience: 5
+    scoring_constraints:
+      max_score: 100
+      required_skills_threshold: 0.5
+    required_skills:
+      - Python
+      - R
+      - Scala
+      - Model Development
+      - Model Validation
+      - Model Monitoring
+      - Risk Management
+      - Compliance
+      - Documentation Automation
+    preferred_skills:
+      - TensorFlow
+      - PyTorch
+      - Scikit-learn
+
+  "Solutions Architect, Health & Life Sciences":
+    role_type: technical
+    scoring_weights: technical
+    min_years_experience: 10
+    scoring_constraints:
+      max_score: 100
+      required_skills_threshold: 0.5
+    required_skills:
+      - Solution Architecture
+      - Cloud Computing (AWS, Azure, or GCP)
+      - Backend Integrations
+      - Software Architecture Design
+      - Business Development
+      - Technical Leadership
+    preferred_skills:
+      - Healthcare IT
+      - Life Sciences IT
+
+  "AWS Platform Data Engineer":
+    role_type: technical
+    scoring_weights: technical
+    min_years_experience: 7
+    scoring_constraints:
+      max_score: 100
+      required_skills_threshold: 0.5
+      platform_specific_requirements:
+        - aws
+      minimum_platform_skills: 2
+    required_skills:
+      - AWS
+      - Databricks
+      - Terraform
+      - Infrastructure as Code (IaC)
+      - Python
+      - Bash
+      - PowerShell
+      - Cloud Security
+    preferred_skills:
+      - Spark
+      - Kafka
+      - Airflow
+
+  "Site Reliability Engineer":
+    role_type: technical
+    scoring_weights: technical
+    min_years_experience: 6
+    scoring_constraints:
+      max_score: 100
+      required_skills_threshold: 0.5
+    required_skills:
+      - Jenkins
+      - Groovy
+      - Kubernetes
+      - Helm
+      - AWS
+      - GCP
+      - Azure
+      - Terraform
+      - CloudFormation
+      - Prometheus
+      - Grafana
+      - Bash
+      - Python
+      - CI/CD
+      - GitOps
+      - Networking
+      - Security
+    preferred_skills:
+      - Ansible
+      - Docker
+      - Istio
+      - Kibana
+      - ELK Stack
+
+  "Generative AI Architect":
+    role_type: technical
+    scoring_weights: technical
+    min_years_experience: 8
+    scoring_constraints:
+      max_score: 100
+      required_skills_threshold: 0.5
+    required_skills:
+      - MLOps
+      - AI Architecture
+      - Containerization
+      - Model Optimization
+      - Python
+      - Cloud Platforms (GCP, AWS, Azure)
+    preferred_skills:
+      - OpenAI API
+      - TensorFlow
+      - PyTorch
+      - RLHF
+      - Data Science
+      - ETL Pipeline Management
+      - Kubernetes
