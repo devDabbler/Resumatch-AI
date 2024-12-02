@@ -1,0 +1,46 @@
+{
+    "candidate_name": "Emily Rodriguez",
+    "expected_score": 72.0,
+    "years_experience": 4,
+    "education": {
+        "level": "Masters",
+        "field": "Applied Mathematics",
+        "relevance": "partial"
+    },
+    "expected_skills": {
+        "required_skills": [
+            "Python",
+            "R",
+            "Statistics",
+            "Data Analysis"
+        ],
+        "preferred_skills": [
+            "Scikit-learn",
+            "TensorFlow",
+            "SQL",
+            "Tableau"
+        ]
+    },
+    "technical_competencies": {
+        "ml_frameworks": ["Scikit-learn", "Basic TensorFlow"],
+        "data_analysis": ["R", "Python", "SQL"],
+        "visualization": ["Tableau", "Matplotlib"]
+    },
+    "domain_expertise": [
+        "Statistical Modeling",
+        "A/B Testing",
+        "Data Analysis",
+        "Basic Machine Learning"
+    ],
+    "impact_metrics": [
+        "Reduced model training time by 30%",
+        "Implemented A/B testing framework",
+        "Developed statistical models for forecasting"
+    ],
+    "notes": "Strong statistical background with growing ML expertise",
+    "expected_scores": {
+        "skills_match": 70,
+        "experience_match": 75,
+        "role_relevance": 70
+    }
+}

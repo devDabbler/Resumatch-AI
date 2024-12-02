@@ -1,20 +1,37 @@
 import logging
 import sys
+import os
+from logging.handlers import RotatingFileHandler
 
 def setup_logging():
+    # Determine environment
+    env = os.getenv('ENVIRONMENT', 'development').lower()
+    
+    # Set appropriate log levels based on environment
+    if env == 'production':
+        file_log_level = logging.INFO
+        console_log_level = logging.WARNING
+    else:
+        file_log_level = logging.DEBUG
+        console_log_level = logging.INFO
+    
     # Create formatters
     detailed_formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
     )
     
-    # Set up file handler for detailed logging
-    file_handler = logging.FileHandler('detailed_matching.log')
-    file_handler.setLevel(logging.DEBUG)
+    # Set up rotating file handler for detailed logging (10MB per file, keep 5 backup files)
+    file_handler = RotatingFileHandler(
+        'logs/detailed_matching.log',
+        maxBytes=10*1024*1024,  # 10MB
+        backupCount=5
+    )
+    file_handler.setLevel(file_log_level)
     file_handler.setFormatter(detailed_formatter)
     
     # Set up console handler for important info
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
+    console_handler.setLevel(console_log_level)
     console_handler.setFormatter(detailed_formatter)
     
     # Configure root logger
@@ -23,6 +40,9 @@ def setup_logging():
     
     # Remove any existing handlers to prevent duplication
     root_logger.handlers = []
+    
+    # Ensure logs directory exists
+    os.makedirs('logs', exist_ok=True)
     
     root_logger.addHandler(file_handler)
     root_logger.addHandler(console_handler)

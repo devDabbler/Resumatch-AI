@@ -1,0 +1,45 @@
+{
+    "candidate_name": "Michael Chen",
+    "expected_score": 75.0,
+    "years_experience": 3,
+    "education": {
+        "level": "Masters",
+        "field": "Data Analytics",
+        "relevance": "direct"
+    },
+    "expected_skills": {
+        "required_skills": [
+            "Python",
+            "Machine Learning",
+            "Statistics",
+            "Data Visualization"
+        ],
+        "preferred_skills": [
+            "Scikit-learn",
+            "Pandas",
+            "NumPy",
+            "SQL"
+        ]
+    },
+    "technical_competencies": {
+        "ml_frameworks": ["Scikit-learn"],
+        "big_data": ["SQL", "Pandas"],
+        "cloud_platforms": ["AWS"]
+    },
+    "domain_expertise": [
+        "Data Analytics",
+        "Business Intelligence",
+        "Statistical Analysis"
+    ],
+    "impact_metrics": [
+        "Improved model accuracy by 15%",
+        "Reduced reporting time by 40%",
+        "Automated ETL processes"
+    ],
+    "notes": "Good foundational skills with growing expertise in ML",
+    "expected_scores": {
+        "skills_match": 75,
+        "experience_match": 70,
+        "role_relevance": 75
+    }
+}

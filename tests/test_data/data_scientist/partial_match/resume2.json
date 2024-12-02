@@ -1,0 +1,43 @@
+{
+    "candidate_name": "David Kim",
+    "expected_score": 55.0,
+    "years_experience": 1,
+    "education": {
+        "level": "Bachelors",
+        "field": "Information Systems",
+        "relevance": "partial"
+    },
+    "expected_skills": {
+        "required_skills": [
+            "Python",
+            "SQL",
+            "Data Analysis"
+        ],
+        "preferred_skills": [
+            "Pandas",
+            "Basic ML",
+            "Tableau"
+        ]
+    },
+    "technical_competencies": {
+        "programming": ["Python", "SQL"],
+        "data_analysis": ["Excel", "Pandas"],
+        "visualization": ["Tableau"]
+    },
+    "domain_expertise": [
+        "Data Analysis",
+        "Business Intelligence",
+        "Basic Python Programming"
+    ],
+    "impact_metrics": [
+        "Created automated reports",
+        "Built data pipelines",
+        "Improved data quality by 25%"
+    ],
+    "notes": "Strong in data analysis but limited ML experience",
+    "expected_scores": {
+        "skills_match": 55,
+        "experience_match": 45,
+        "role_relevance": 50
+    }
+}

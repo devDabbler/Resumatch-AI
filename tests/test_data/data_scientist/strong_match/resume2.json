@@ -1,0 +1,52 @@
+{
+    "candidate_name": "Mengdie (Flora) Wang",
+    "expected_score": 92.0,
+    "years_experience": 4,
+    "education": {
+        "level": "Masters",
+        "field": "Computer Science",
+        "relevance": "partial"
+    },
+    "expected_skills": {
+        "required_skills": [
+            "Python",
+            "Machine Learning",
+            "Deep Learning",
+            "Statistics",
+            "Data Visualization",
+            "Big Data"
+        ],
+        "preferred_skills": [
+            "TensorFlow",
+            "PyTorch",
+            "Docker",
+            "Airflow",
+            "LangChain",
+            "Vector Databases"
+        ]
+    },
+    "technical_competencies": {
+        "ml_frameworks": ["PyTorch", "TensorFlow", "BERT", "Transformer"],
+        "big_data": ["Snowflake", "AWS S3"],
+        "cloud_platforms": ["AWS", "Azure"]
+    },
+    "domain_expertise": [
+        "Foundation Models",
+        "LLMs",
+        "Computer Vision",
+        "Time Series Analysis",
+        "Healthcare Analytics"
+    ],
+    "impact_metrics": [
+        "12% increase in prediction accuracy",
+        "430K annual cost savings",
+        "6% model performance improvement",
+        "13% improvement in LSTM accuracy"
+    ],
+    "notes": "Strong research background with publications. Expertise in modern ML techniques including LLMs and foundation models. Good balance of research and practical experience.",
+    "expected_scores": {
+        "skills_match": 90,
+        "experience_match": 85,
+        "role_relevance": 85
+    }
+}

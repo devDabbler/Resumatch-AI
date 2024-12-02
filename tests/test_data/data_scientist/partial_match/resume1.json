@@ -1,0 +1,42 @@
+{
+    "candidate_name": "Sarah Johnson",
+    "expected_score": 60.0,
+    "years_experience": 2,
+    "education": {
+        "level": "Bachelors",
+        "field": "Computer Science",
+        "relevance": "partial"
+    },
+    "expected_skills": {
+        "required_skills": [
+            "Python",
+            "Basic ML",
+            "SQL"
+        ],
+        "preferred_skills": [
+            "Pandas",
+            "NumPy",
+            "Matplotlib"
+        ]
+    },
+    "technical_competencies": {
+        "ml_frameworks": ["Basic Scikit-learn"],
+        "big_data": ["SQL"],
+        "cloud_platforms": ["Basic AWS"]
+    },
+    "domain_expertise": [
+        "Data Analysis",
+        "Basic Machine Learning"
+    ],
+    "impact_metrics": [
+        "Built basic ML models",
+        "Created data dashboards",
+        "Automated data cleaning processes"
+    ],
+    "notes": "Junior data scientist with potential but needs more experience",
+    "expected_scores": {
+        "skills_match": 60,
+        "experience_match": 55,
+        "role_relevance": 50
+    }
+}

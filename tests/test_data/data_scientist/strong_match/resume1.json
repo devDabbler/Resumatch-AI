@@ -1,0 +1,53 @@
+{
+    "candidate_name": "Ayush Oturkar",
+    "expected_score": 95.0,
+    "years_experience": 5,
+    "education": {
+        "level": "Masters",
+        "field": "Statistics-Data Science",
+        "relevance": "direct"
+    },
+    "expected_skills": {
+        "required_skills": [
+            "Python",
+            "Machine Learning",
+            "Deep Learning",
+            "Statistics",
+            "Data Visualization",
+            "Big Data"
+        ],
+        "preferred_skills": [
+            "TensorFlow",
+            "PyTorch",
+            "Scikit-learn",
+            "Pandas",
+            "NumPy",
+            "MLflow",
+            "Docker",
+            "Databricks"
+        ]
+    },
+    "technical_competencies": {
+        "ml_frameworks": ["TensorFlow", "PyTorch", "Scikit-learn"],
+        "big_data": ["Spark", "PySpark"],
+        "cloud_platforms": ["AWS", "Azure"]
+    },
+    "domain_expertise": [
+        "Predictive Analytics",
+        "Natural Language Processing",
+        "MLOps",
+        "Time Series Analysis"
+    ],
+    "impact_metrics": [
+        "$1M EBIDTA savings",
+        "90% reduction in false positives",
+        "2.5% increase in top-line sales",
+        "99% reduction in manual efforts"
+    ],
+    "notes": "Strong candidate with balanced experience across ML, deep learning, and MLOps. Proven track record of business impact across multiple industries. Top 1% Kaggle Master.",
+    "expected_scores": {
+        "skills_match": 85,
+        "experience_match": 90,
+        "role_relevance": 85
+    }
+}

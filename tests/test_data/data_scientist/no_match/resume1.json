@@ -1,0 +1,43 @@
+{
+    "candidate_name": "John Smith",
+    "expected_score": 35.0,
+    "years_experience": 5,
+    "education": {
+        "level": "Bachelors",
+        "field": "Marketing",
+        "relevance": "minimal"
+    },
+    "expected_skills": {
+        "required_skills": [
+            "Excel",
+            "Basic Python",
+            "Marketing Analytics"
+        ],
+        "preferred_skills": [
+            "Google Analytics",
+            "Social Media Analytics",
+            "Basic SQL"
+        ]
+    },
+    "technical_competencies": {
+        "analytics": ["Google Analytics", "Excel"],
+        "programming": ["Basic Python"],
+        "marketing": ["Digital Marketing", "SEO"]
+    },
+    "domain_expertise": [
+        "Digital Marketing",
+        "Content Strategy",
+        "Basic Data Analysis"
+    ],
+    "impact_metrics": [
+        "Increased web traffic by 200%",
+        "Managed $1M marketing budget",
+        "Led marketing campaigns"
+    ],
+    "notes": "Strong marketing background but minimal data science experience",
+    "expected_scores": {
+        "skills_match": 35,
+        "experience_match": 30,
+        "role_relevance": 25
+    }
+}

@@ -1,0 +1,43 @@
+{
+    "candidate_name": "Rachel Martinez",
+    "expected_score": 58.0,
+    "years_experience": 3,
+    "education": {
+        "level": "Bachelors",
+        "field": "Physics",
+        "relevance": "partial"
+    },
+    "expected_skills": {
+        "required_skills": [
+            "Python",
+            "MATLAB",
+            "Data Analysis"
+        ],
+        "preferred_skills": [
+            "NumPy",
+            "SciPy",
+            "Basic ML"
+        ]
+    },
+    "technical_competencies": {
+        "scientific_computing": ["MATLAB", "Python"],
+        "data_analysis": ["NumPy", "SciPy"],
+        "visualization": ["Matplotlib"]
+    },
+    "domain_expertise": [
+        "Scientific Computing",
+        "Data Analysis",
+        "Physics Simulations"
+    ],
+    "impact_metrics": [
+        "Developed physics simulations",
+        "Analyzed large datasets",
+        "Published research paper"
+    ],
+    "notes": "Strong scientific background but needs ML experience",
+    "expected_scores": {
+        "skills_match": 58,
+        "experience_match": 52,
+        "role_relevance": 55
+    }
+}

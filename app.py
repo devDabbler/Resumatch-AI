@@ -5,6 +5,7 @@ import logging
 from utils.pdf import PDFProcessor
 from utils.matcher import JobMatcher
 from utils.llm import LLMAnalyzer
+from utils.report_generator import ReportGenerator
 from typing import Dict
 from dotenv import load_dotenv
 from utils.logging_config import setup_logging
@@ -36,6 +37,23 @@ def display_results(analysis_results: Dict, rank: int = None):
             st.error("Invalid analysis results format")
             st.json(analysis_results)
             return
+
+        # Add Download PDF section at the top
+        st.markdown("### 📊 Analysis Report")
+        try:
+            report_gen = ReportGenerator()
+            pdf_bytes = report_gen.generate_report(analysis_results)
+            key_suffix = f"_{rank}" if rank is not None else ""
+            st.download_button(
+                label="📥 Download PDF Report",
+                data=pdf_bytes,
+                file_name=f"resume_analysis_report{key_suffix}.pdf",
+                mime="application/pdf",
+                key=f"download_report{key_suffix}"
+            )
+        except Exception as e:
+            logger.error(f"Failed to generate PDF report: {str(e)}")
+            st.error("Failed to generate PDF report. Please try again.")
 
         # Validate required fields
         required_fields = [

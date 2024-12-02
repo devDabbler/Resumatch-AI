@@ -25,60 +25,60 @@ load_dotenv(override=True)
 class LLMAnalyzer:
     def __init__(self):
         """Initialize the analyzer with Mixtral and Gemini support."""
-        self.groq_api_key = os.getenv('GROQ_API_KEY')
-        self.gemini_api_key = os.getenv('GEMINI_API_KEY')
-        
-        self.mixtral_model = "mixtral-8x7b-32768"
-        self.gemini_model = "gemini-pro"
-        
-        self.groq_client = None
-        self.gemini_client = None
-        
-        if not self.groq_api_key:
-            logger.error("GROQ_API_KEY not found in environment variables")
-            raise ValueError("GROQ_API_KEY not found in environment variables")
-            
-        if not self.gemini_api_key:
-            logger.warning("GEMINI_API_KEY not found - Gemini features disabled")
-        
         try:
+            self.groq_api_key = os.getenv('GROQ_API_KEY')
+            self.gemini_api_key = os.getenv('GEMINI_API_KEY')
+            
+            self.mixtral_model = "mixtral-8x7b-32768"
+            self.gemini_model = "gemini-pro"
+            
+            self.groq_client = None
+            self.gemini_client = None
+            
+            if not self.groq_api_key:
+                raise ValueError("GROQ_API_KEY not found in environment variables")
+                
+            if not self.gemini_api_key:
+                logger.warning("GEMINI_API_KEY not found - Gemini features disabled")
+            
             self.initialize_clients()
         except Exception as e:
-            logger.error(f"Failed to initialize during __init__: {str(e)}")
-            raise
+            logger.error(f"LLMAnalyzer initialization failed: {str(e)}")
+            logger.debug(f"Initialization error details: {traceback.format_exc()}")
+            raise RuntimeError(f"Failed to initialize LLM services: {str(e)}") from e
 
     def initialize_clients(self) -> None:
-        """Initialize the LLM clients."""
+        """Initialize the LLM clients with proper error handling."""
         try:
-            # Initialize Groq
             self.groq_client = Groq(api_key=self.groq_api_key)
-            logger.info("Groq client initialized successfully")
+            logger.info("Successfully initialized Groq client")
             
-            # Initialize Gemini if key available
             if self.gemini_api_key:
-                try:
-                    genai.configure(api_key=self.gemini_api_key)
-                    model_config = {
-                        "temperature": 0.7,
-                        "top_p": 1,
-                        "top_k": 1,
-                        "max_output_tokens": 2048,
-                    }
-                    self.gemini_client = genai.GenerativeModel(
-                        model_name=self.gemini_model,
-                        generation_config=model_config
-                    )
-                    logger.info("Gemini client initialized successfully")
-                except ImportError as e:
-                    logger.error(f"Failed to import Gemini dependencies: {str(e)}")
-                    self.gemini_client = None
-                except Exception as e:
-                    logger.error(f"Failed to initialize Gemini client: {str(e)}")
-                    self.gemini_client = None
-            
+                genai.configure(api_key=self.gemini_api_key)
+                self.gemini_client = genai.GenerativeModel(self.gemini_model)
+                logger.info("Successfully initialized Gemini client")
         except Exception as e:
-            logger.error(f"Failed to initialize clients: {str(e)}")
-            raise
+            logger.error(f"Failed to initialize LLM clients: {str(e)}")
+            logger.debug(f"Client initialization error details: {traceback.format_exc()}")
+            raise RuntimeError("Failed to initialize one or more LLM clients") from e
+
+    def handle_api_error(self, error: Exception, service: str) -> None:
+        """Centralized error handling for API calls."""
+        error_msg = str(error)
+        if "rate limit" in error_msg.lower():
+            logger.error(f"{service} API rate limit exceeded")
+            raise RuntimeError(f"{service} rate limit exceeded. Please try again later.")
+        elif "invalid api key" in error_msg.lower():
+            logger.error(f"Invalid {service} API key")
+            raise ValueError(f"Invalid {service} API key. Please check your configuration.")
+        elif "timeout" in error_msg.lower():
+            logger.error(f"{service} API request timed out")
+            raise TimeoutError(f"{service} request timed out. Please try again.")
+        else:
+            logger.error(f"Unexpected {service} API error: {error_msg}")
+            logger.debug(f"API error details: {traceback.format_exc()}")
+            raise RuntimeError(f"Unexpected error with {service} API: {error_msg}")
+
 
     def execute_request(self, messages: List[Dict[str, str]]) -> Dict[str, Any]:
         """Execute a request to Groq with retry logic."""
@@ -101,11 +101,7 @@ class LLMAnalyzer:
                 return response
                 
             except Exception as e:
-                logger.error(f"Attempt {attempt + 1} failed: {e}")
-                if hasattr(e, 'response'):
-                    logger.error(f"Response status: {e.response.status_code}")
-                    logger.error(f"Response body: {e.response.text}")
-                
+                self.handle_api_error(e, "Groq")
                 if attempt < retries - 1:
                     wait_time = 2 ** attempt
                     logger.info(f"Waiting {wait_time} seconds before retry...")
@@ -119,75 +115,70 @@ class LLMAnalyzer:
         try:
             with open('config/jobs.yaml', 'r') as f:
                 config = yaml.safe_load(f)
-            
+        
             role_config = config['job_roles'].get(role_name)
             if not role_config:
                 logger.error(f"Role configuration not found for: {role_name}")
                 return 0
-            
+        
             # Get scoring constraints with defaults
             scoring_constraints = role_config.get('scoring_constraints', {})
             max_score = scoring_constraints.get('max_score', 100)
             required_skills_threshold = scoring_constraints.get('required_skills_threshold', 0.5)
-            
-            # Calculate required skills match
+        
+            # Calculate required skills match with more weight for ML/DS roles
             total_required = len(role_config['required_skills'])
             matched_required = len(matched_skills.get('required', []))
             required_ratio = matched_required / total_required if total_required > 0 else 0
-            
+        
             # Calculate preferred skills match
             total_preferred = len(role_config['preferred_skills'])
             matched_preferred = len(matched_skills.get('preferred', []))
             preferred_ratio = matched_preferred / total_preferred if total_preferred > 0 else 0
-            
+        
             logger.info(f"Required skills match: {required_ratio:.2f} ({matched_required}/{total_required})")
             logger.info(f"Preferred skills match: {preferred_ratio:.2f} ({matched_preferred}/{total_preferred})")
+        
+            # Adjust scoring for data science roles
+            if role_name.lower() in ['data scientist', 'ml engineer', 'machine learning engineer']:
+                # Group similar skills (e.g., ML and DL count as one category)
+                skill_categories = {
+                    'ml': ['Machine Learning', 'Deep Learning'],
+                    'stats': ['Statistics', 'Time Series Regression'],
+                    'data': ['Data Visualization', 'Big Data']
+                }
             
-            # Get skill weights from config
+                # Check if at least one skill from each category is matched
+                category_matches = {
+                    cat: any(skill in matched_skills.get('required', []) 
+                            for skill in skills)
+                    for cat, skills in skill_categories.items()
+                }
+            
+                # Boost score if core categories are matched
+                category_match_ratio = sum(category_matches.values()) / len(category_matches)
+                required_ratio = max(required_ratio, category_match_ratio)
+        
+            # Calculate final score with adjusted weights
             skill_weights = config['scoring_config']['skill_weights']
             required_weight = skill_weights['required']
             preferred_weight = skill_weights['preferred']
-            
-            # Calculate base score using weighted average
-            base_score = (
-                required_ratio * required_weight +
-                preferred_ratio * preferred_weight
-            ) * max_score
-            
-            # Apply gradual scaling based on required skills ratio
+        
+            # Apply threshold bonus
             if required_ratio >= required_skills_threshold:
-                # Full score if above threshold
-                final_score = base_score
-            else:
-                # Gradual reduction based on how close to threshold
-                reduction_factor = (required_ratio / required_skills_threshold) ** 0.5  # Square root for less aggressive reduction
-                final_score = base_score * reduction_factor
+                required_ratio += 0.2  # Bonus for meeting threshold
             
-            # Check platform-specific requirements if they exist
-            if 'platform_specific_requirements' in scoring_constraints:
-                platform_skills = scoring_constraints['platform_specific_requirements']
-                min_platform_skills = scoring_constraints.get('minimum_platform_skills', 0)
-                
-                # Count matched platform-specific skills
-                matched_platform_skills = sum(
-                    1 for skill in platform_skills 
-                    if any(skill.lower() in matched.lower() for matched in matched_skills.get('required', []))
-                )
-                
-                logger.info(f"Platform-specific skills match: {matched_platform_skills}/{len(platform_skills)}")
-                
-                if matched_platform_skills < min_platform_skills:
-                    # Reduce score but don't zero it out
-                    platform_reduction = 0.7  # 30% reduction for missing platform skills
-                    final_score *= platform_reduction
-                    logger.info(f"Applied platform skills reduction: {platform_reduction}")
-            
-            # Ensure score doesn't exceed max_score
-            final_score = min(int(final_score), max_score)
+            # Calculate weighted score
+            score = (
+                (required_ratio * required_weight + preferred_ratio * preferred_weight)
+                * max_score
+            )
+        
+            # Round to nearest integer
+            final_score = min(max_score, round(score))
             logger.info(f"Final technical score: {final_score}/{max_score}")
-            
             return final_score
-            
+        
         except Exception as e:
             logger.error(f"Error calculating technical score: {str(e)}")
             return 0
@@ -278,13 +269,23 @@ class LLMAnalyzer:
             # Remove any invalid escape sequences
             json_str = re.sub(r'\\(?!["\\/bfnrt]|u[0-9a-fA-F]{4})', '', json_str)
             
-            # Validate JSON structure
-            json.loads(json_str)
+            # Additional cleaning for common issues
+            json_str = re.sub(r'<string>', '""', json_str)  # Replace <string> placeholders
+            json_str = re.sub(r'<number>', '0', json_str)   # Replace <number> placeholders
             
+            # Try to parse the JSON
+            try:
+                json.loads(json_str)
+            except json.JSONDecodeError:
+                # Try to fix common issues with quotes
+                json_str = re.sub(r'(?<!\\)"(?![:,}\]])', '\\"', json_str)
+                json.loads(json_str)  # Validate the fixed JSON
+        
             return json_str
             
         except Exception as e:
             logger.error(f"JSON extraction failed: {str(e)}")
+            logger.debug(f"Problematic JSON string: {json_str if 'json_str' in locals() else 'Not extracted'}")
             raise
 
     def _mixtral_technical_analysis(self, resume_text, role_name, 

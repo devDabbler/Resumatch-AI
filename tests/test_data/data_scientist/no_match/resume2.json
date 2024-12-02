@@ -1,0 +1,43 @@
+{
+    "candidate_name": "Alex Thompson",
+    "expected_score": 32.0,
+    "years_experience": 6,
+    "education": {
+        "level": "Bachelors",
+        "field": "Business Administration",
+        "relevance": "minimal"
+    },
+    "expected_skills": {
+        "required_skills": [
+            "Excel",
+            "PowerBI",
+            "Basic SQL"
+        ],
+        "preferred_skills": [
+            "Tableau",
+            "Basic Python",
+            "Business Analytics"
+        ]
+    },
+    "technical_competencies": {
+        "business_tools": ["Excel", "PowerBI"],
+        "analytics": ["Basic SQL", "Basic Python"],
+        "visualization": ["Tableau"]
+    },
+    "domain_expertise": [
+        "Business Analytics",
+        "Financial Analysis",
+        "Project Management"
+    ],
+    "impact_metrics": [
+        "Led business analytics team",
+        "Reduced operational costs by 15%",
+        "Implemented PowerBI dashboards"
+    ],
+    "notes": "Business analyst with minimal data science experience",
+    "expected_scores": {
+        "skills_match": 32,
+        "experience_match": 35,
+        "role_relevance": 30
+    }
+}
