@@ -50,20 +50,20 @@ scoring_config:
       experience: 0.45                # Significantly increased
       role_relevance: 0.07
       us_market_fit: 0.03
-    
+
   experience_scoring:
     minimum_years: 5
     penalty_per_missing_year: 0.10    # Further reduced
     max_penalty: 0.30                 # Further reduced
     bonus_per_extra_year: 0.15        # Increased
     max_bonus: 0.45                   # Significantly increased
-  
+
   thresholds:
     strong_match: 70                  # Further lowered
     good_match: 60                    # Further lowered
     potential_match: 45               # Further lowered
     minimum_match: 30                 # Further lowered
-  
+
   experience_weights:
     us_professional_weight: 0.65      # Further decreased
     non_us_professional_weight: 0.35  # Further increased
@@ -152,7 +152,7 @@ job_roles:
       - Independent work capability
       - Team collaboration
 
-  "Software Development Engineer":
+  "Software Development Engineer, C3":
     role_type: technical
     education:
       minimum: "Bachelor's degree"
@@ -167,78 +167,68 @@ job_roles:
       required_skills_threshold: 0.45
       minimum_skills_match: 0.35
     required_skills:
-      - Python
+      - React
       - JavaScript
-      - ETL Processing
-      - Shell Scripting
+      - Python
       - Git
       - SQL
       - NoSQL
       - Data Structures
       - Algorithms
-      - Time Series Data
-      - "React OR Vue OR Angular OR Backbone"
-      - "AWS OR GCP OR Azure"
+      - CI/CD
     preferred_skills:
       - Redux
+      - TypeScript
       - Vue.js
-      - Backbone.js
+      - Angular
       - GitLab
-      - CI/CD
       - Agile
-      - Pandas
-      - NumPy
-      - Cron
-      - Data Cleansing
-      - Data Normalization
+      - Shell Scripting
+      - Jest
+      - webpack
+      - REST APIs
     skill_weights:
-      core_development: 0.35
-      data_engineering: 0.25
-      cloud_devops: 0.20
-      frontend: 0.20
+      frontend: 0.40
+      backend: 0.30
+      devops: 0.20
+      core_cs: 0.10
     skill_groups:
-      core_development:
-        - Python
+      frontend:
+        - React
         - JavaScript
-        - Data Structures
-        - Algorithms
-        - Shell Scripting
-      data_engineering:
-        - ETL Processing
+        - Redux
+        - TypeScript
+        - Vue.js
+        - Angular
+      backend:
+        - Python
         - SQL
         - NoSQL
-        - Time Series Data
-        - Pandas
-        - NumPy
-      cloud_devops:
+        - REST APIs
+      devops:
         - Git
         - GitLab
         - CI/CD
-        - AWS
-        - GCP
-        - Azure
-      frontend:
-        - React
-        - Vue
-        - Angular
-        - Backbone
-        - Redux
+        - "AWS OR GCP OR Azure"
+      core_cs:
+        - Data Structures
+        - Algorithms
     key_responsibilities:
-      - "Design and develop AI-centric enterprise applications"
-      - "Lead data integration systems development"
-      - "Implement ETL processes for large-scale data"
-      - "Test and refine software applications"
-      - "Optimize application performance"
-      - "Automate data operations"
-      - "Participate in design reviews"
-      - "Manage version control"
-      - "Create application specifications and documentation"
+      - "Design and develop full-stack enterprise applications"
+      - "Build responsive and efficient front-end interfaces using React"
+      - "Implement backend services and APIs"
+      - "Optimize application performance and user experience"
+      - "Collaborate on architecture and technical design"
+      - "Participate in code reviews and technical discussions"
+      - "Write clean, maintainable, and well-tested code"
+      - "Create technical documentation"
+      - "Deploy and maintain applications in cloud environments"
     soft_skills:
       - "Problem-solving"
       - "Technical leadership"
       - "Client collaboration"
-      - "Documentation"
-      - "Quality focus"
+      - "Communication"
+      - "Agile teamwork"
 
   "Solutions Architect, ANZ, Australia":
     role_type: technical

@@ -135,9 +135,28 @@ class LLMAnalyzer:
                 technical_analysis.update({
                     "experience_details": experience_analysis
                 })
+                
+                # Adjust technical score based on experience analysis
+                if experience_analysis:
+                    # Penalize for short stints if there are more than 2
+                    if len(experience_analysis.get('short_stints', [])) > 2:
+                        technical_score = int(technical_score * 0.9)  # 10% penalty
+                        
+                    # Penalize for employment gaps
+                    if len(experience_analysis.get('experience_flags', [])) > 0:
+                        technical_score = int(technical_score * 0.95)  # 5% penalty
+                        
+                    # Adjust based on US vs non-US experience ratio
+                    us_exp_years = experience_analysis.get('us_experience_years', 0)
+                    total_exp_years = experience_analysis.get('total_professional_years', 0)
+                    if total_exp_years > 0:
+                        us_ratio = us_exp_years / total_exp_years
+                        if us_ratio < 0.3:  # Less than 30% US experience
+                            technical_score = int(technical_score * 0.9)  # 10% penalty
             
             # Add confidence_score for backward compatibility
-            technical_analysis["confidence_score"] = technical_analysis["technical_match_score"]
+            technical_analysis["confidence_score"] = technical_score
+            technical_analysis["technical_match_score"] = technical_score
             
             return technical_analysis
             
@@ -174,159 +193,40 @@ class LLMAnalyzer:
             return text
 
     def _extract_json_from_text(self, text: str) -> str:
-        """Extract JSON object from text with improved robustness."""
+        """Extract and repair truncated JSON."""
         try:
-            # Log the raw text for debugging
-            logger.debug(f"Raw text to parse: {text}")
-            
-            # Pre-process the text to handle common LLM formatting
             text = text.strip()
-            
-            # If the text starts with markdown-style language indicator, remove it
-            text = re.sub(r'^```(?:json)?\s*', '', text)
-            text = re.sub(r'\s*```$', '', text)
-            
-            # Find the JSON content
-            json_str = None
-            
-            # Try to find JSON between triple backticks first
-            json_match = re.search(r'```(?:json)?\s*(\{[\s\S]*?\})\s*```', text, re.DOTALL)
-            if json_match:
-                json_str = json_match.group(1)
-            else:
-                # Find the outermost JSON object
-                brace_count = 0
-                start = -1
+            logger.debug(f"Input text: {text[:200]}...")
+
+            # Find JSON content
+            start = text.find('{')
+            end = text.rfind('}') + 1
+            if start == -1 or end == 0:
+                raise ValueError("No JSON object found")
                 
-                for i, char in enumerate(text):
-                    if char == '{':
-                        if brace_count == 0:
-                            start = i
-                        brace_count += 1
-                    elif char == '}':
-                        brace_count -= 1
-                        if brace_count == 0 and start != -1:
-                            json_str = text[start:i+1]
-                            break
-                
-                if not json_str:
-                    # Try to find any JSON-like structure
-                    potential_json = re.search(r'\{[^}]*\}', text)
-                    if potential_json:
-                        json_str = potential_json.group(0)
-                    else:
-                        raise ValueError("No valid JSON object found in text")
+            json_str = text[start:end]
+
+            # Handle truncation by completing the JSON structure
+            open_braces = json_str.count('{')
+            close_braces = json_str.count('}')
+            open_brackets = json_str.count('[')
+            close_brackets = json_str.count(']')
             
-            # Clean the extracted JSON string
-            json_str = re.sub(r'[\n\r\t]', ' ', json_str)
-            json_str = re.sub(r'\s+', ' ', json_str)
-            
-            # Handle truncated or malformed values
-            json_str = re.sub(r':\s*(?=[,}])', ': null', json_str)  # Add null for missing values
-            json_str = re.sub(r',\s*}', '}', json_str)  # Remove trailing commas
-            
-            # Fix missing commas between array elements
-            json_str = re.sub(r'(\]|\}|\"|\'|\d)\s+(\{|\[|\"|\d+)', r'\1,\2', json_str)
-            
-            # Remove trailing commas before closing brackets/braces
-            json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)
-            
-            # Fix escape sequences
-            def fix_escapes(match):
-                s = match.group(0)
-                if s in ['\\n', '\\r', '\\t', '\\"', '\\\\', '\\/', '\\b', '\\f']:
-                    return s
-                return s[1:]
-            
-            # Fix invalid escape sequences
-            json_str = re.sub(r'\\[^"\\\/bfnrt]', fix_escapes, json_str)
-            
-            # Quote ALL property names (even if already quoted)
-            def quote_props(match):
-                prop = match.group(2).strip('"\'')  # Remove any existing quotes
-                return f'{match.group(1)}"{prop}":'
-            
-            # Quote property names more aggressively
-            json_str = re.sub(r'([{,]\s*)([^"\s{},\[\]]+)\s*:', quote_props, json_str)
-            
-            # Handle single quotes
-            json_str = json_str.replace("'", '"')
-            
-            # Handle boolean values and null
-            json_str = re.sub(r':\s*true\b', ': true', json_str, flags=re.IGNORECASE)
-            json_str = re.sub(r':\s*false\b', ': false', json_str, flags=re.IGNORECASE)
-            json_str = re.sub(r':\s*null\b', ': null', json_str, flags=re.IGNORECASE)
-            
-            # Fix missing commas in arrays and between objects
-            json_str = re.sub(r'\]\s*\[', '],[', json_str)
-            json_str = re.sub(r'\}\s*\{', '},{', json_str)
-            
-            # Fix missing commas after strings in arrays
-            json_str = re.sub(r'"\s+(?=(?:[^"]*"[^"]*")*[^"]*$)', '",', json_str)
-            
-            # Ensure arrays and objects are properly terminated
-            def balance_braces(s):
-                stack = []
-                for i, char in enumerate(s):
-                    if char in '{[':
-                        stack.append(char)
-                    elif char in '}]':
-                        if not stack:
-                            continue
-                        if (char == '}' and stack[-1] == '{') or (char == ']' and stack[-1] == '['):
-                            stack.pop()
-                
-                # Close any remaining open braces/brackets
-                while stack:
-                    char = stack.pop()
-                    s += '}' if char == '{' else ']'
-                return s
-            
-            json_str = balance_braces(json_str)
-            
-            # Validate JSON structure before parsing
-            def validate_json_structure(s):
-                # Ensure all arrays have at least one element or are empty
-                s = re.sub(r'\[\s*\]', '[]', s)
-                s = re.sub(r'\[\s*,', '[', s)
-                s = re.sub(r',\s*\]', ']', s)
-                
-                # Ensure all objects have valid key-value pairs
-                s = re.sub(r'\{\s*\}', '{}', s)
-                s = re.sub(r'\{\s*,', '{', s)
-                s = re.sub(r',\s*\}', '}', s)
-                
-                return s
-            
-            json_str = validate_json_structure(json_str)
-            
-            # Log the processed JSON string
-            logger.debug(f"Processed JSON string: {json_str}")
-            
+            # Add missing closing braces/brackets if truncated
+            json_str += ']' * (open_brackets - close_brackets)
+            json_str += '}' * (open_braces - close_braces)
+
+            # Clean and parse
             try:
-                # Try to parse the JSON
-                parsed = json.loads(json_str)
-                return json.dumps(parsed, ensure_ascii=False)  # Added ensure_ascii=False
-            except json.JSONDecodeError as e:
-                logger.warning(f"Initial JSON parsing failed: {str(e)}")
-                
-                # Try one more time with additional cleaning
-                json_str = re.sub(r'([{,]\s*)([^"\s{},\[\]]+)\s*:', r'\1"\2":', json_str)
-                json_str = re.sub(r'\\([^"\\\/bfnrt])', r'\1', json_str)
-                json_str = re.sub(r'"\s+"', '","', json_str)  # Fix missing commas between strings
-                json_str = re.sub(r'}\s*{', '},{', json_str)  # Fix missing commas between objects
-                json_str = re.sub(r']\s*\[', '],[', json_str)  # Fix missing commas between arrays
-                json_str = re.sub(r':\s*(?=[,}])', ': null', json_str)  # Add null for missing values
-                
-                # Validate structure again
-                json_str = validate_json_structure(json_str)
-                
-                # Try parsing again with ensure_ascii=False
                 return json.dumps(json.loads(json_str), ensure_ascii=False)
-                
+            except json.JSONDecodeError as e:
+                logger.warning(f"Initial parse failed: {str(e)}, attempting additional fixes")
+                json_str = re.sub(r'([^",}\]]\s*)([\]}])', r'"\1"\2', json_str)
+                return json.dumps(json.loads(json_str), ensure_ascii=False)
+
         except Exception as e:
             logger.error(f"JSON extraction failed: {str(e)}")
-            logger.debug(f"Problematic text: {text[:500]}...")
+            logger.error(f"Problematic text: {text[:500]}")
             raise ValueError(f"Failed to extract valid JSON: {str(e)}")
 
     def _mixtral_technical_analysis(self, resume_text, role_name, matched_skills, extracted_experience, technical_score):
@@ -360,20 +260,22 @@ class LLMAnalyzer:
                 recommendation = "NO_MATCH"
             
             system_prompt = (
-                "You are an expert technical recruiter. Your task is to analyze the resume "
-                "and return ONLY a valid JSON object. Follow these strict formatting rules:\n"
-                "1. Use double quotes for ALL property names and string values\n"
-                "2. Always include commas between array elements and object properties\n"
-                "3. Format numbers as integers (no decimal points)\n"
-                "4. Use [] for empty arrays, never null\n"
-                "5. Include all required fields, even if empty\n"
-                "6. Do not include any text before or after the JSON object\n"
-                "7. Do not use markdown formatting or code blocks\n"
-                "8. Ensure all arrays and objects are properly closed\n"
-                "9. Use proper JSON boolean values (true/false) and null"
+                "You are an expert technical recruiter analyzing resumes. "
+                "Your task is to provide a detailed technical analysis in JSON format. "
+                "Rules:\n"
+                "1. ONLY return a valid JSON object\n"
+                "2. Include ALL required fields even if empty\n"
+                "3. Use proper JSON formatting with double quotes\n"
+                "4. Provide specific, detailed responses for each field\n"
+                "5. Base analysis on the provided resume text and role requirements\n"
+                "6. Include at least 3 interview questions\n"
+                "7. Provide detailed key findings\n"
+                "8. List specific technical gaps\n"
+                "9. Include detailed skills assessment\n"
+                "10. Do not include any text outside the JSON object"
             )
             
-            user_prompt = f"""Analyze technical qualifications for {role_name} and return a JSON object exactly matching this structure:
+            user_prompt = f"""Analyze technical qualifications for {role_name} and return a detailed JSON object with this exact structure:
 
 {{
     "technical_match_score": {technical_score},
@@ -381,25 +283,34 @@ class LLMAnalyzer:
         {{
             "skill": "Python",
             "proficiency": "Expert",
-            "years": 5
+            "years": 5,
+            "context": "Used Python for data analysis and machine learning"
+        }},
+        {{
+            "skill": "Machine Learning",
+            "proficiency": "Advanced",
+            "years": 3,
+            "context": "Implemented various ML models"
         }}
     ],
     "technical_gaps": [
-        "Missing skill 1",
-        "Missing skill 2"
+        "Limited experience with specific technology X",
+        "Missing certification Y"
     ],
     "interview_questions": [
-        "Question 1",
-        "Question 2"
+        "Describe your experience with technology X",
+        "How have you implemented Y in previous projects?",
+        "What challenges did you face with Z?"
     ],
     "recommendation": "{recommendation}",
     "key_findings": [
-        "Finding 1",
-        "Finding 2"
+        "Strong background in A",
+        "Demonstrated expertise in B",
+        "Notable achievements in C"
     ],
     "concerns": [
-        "Concern 1",
-        "Concern 2"
+        "Gap in critical skill X",
+        "Limited experience with Y"
     ]
 }}
 
@@ -413,7 +324,12 @@ Experience: {experience_summary}
 Score: {technical_score}
 Recommendation: {recommendation}
 
-Remember: Return ONLY the JSON object with proper formatting."""
+Important:
+1. Provide DETAILED responses for each field
+2. Include SPECIFIC examples from the resume
+3. Make interview questions RELEVANT to the role
+4. Base analysis on ACTUAL resume content
+5. Return ONLY the JSON object with NO additional text"""
 
             messages = [
                 {"role": "system", "content": system_prompt},
@@ -427,51 +343,71 @@ Remember: Return ONLY the JSON object with proper formatting."""
             response = self.execute_request(messages)
             content = response.choices[0].message.content
             
-            # Log the raw response
-            logger.debug(f"Raw LLM response: {content}")
+            # Enhanced logging for response content
+            logger.info("Received Mixtral response")
+            logger.debug(f"Raw LLM response content: {content[:500]}...")  # Log first 500 chars
             
             # Extract and clean JSON
-            json_str = self._extract_json_from_text(content)
-            result = json.loads(json_str)
-            
-            # Force the technical score and recommendation
-            result['technical_match_score'] = technical_score
-            result['recommendation'] = recommendation
-            
-            # Validate required fields and ensure proper types
-            required_fields = {
-                "technical_match_score": int,
-                "skills_assessment": list,
-                "technical_gaps": list,
-                "interview_questions": list,
-                "recommendation": str,
-                "key_findings": list,
-                "concerns": list
-            }
-            
-            for field, field_type in required_fields.items():
-                if field not in result:
-                    if field_type == list:
-                        result[field] = []
-                    elif field_type == int:
-                        result[field] = 0
-                    else:
-                        result[field] = ""
-                elif not isinstance(result[field], field_type):
-                    if field_type == list:
-                        result[field] = [result[field]] if result[field] else []
-                    elif field_type == int:
-                        try:
-                            result[field] = int(result[field])
-                        except (ValueError, TypeError):
-                            result[field] = 0
-                    else:
-                        result[field] = str(result[field])
-            
-            return result
-            
+            try:
+                json_str = self._extract_json_from_text(content)
+                logger.debug(f"Extracted JSON string: {json_str[:500]}...")  # Log extracted JSON
+                
+                result = json.loads(json_str)
+                logger.debug(f"Successfully parsed JSON result: {json.dumps(result, indent=2)}")
+                
+                # Force the technical score and recommendation
+                result['technical_match_score'] = technical_score
+                result['recommendation'] = recommendation
+                
+                # Enhanced validation with logging
+                required_fields = {
+                    "technical_match_score": int,
+                    "skills_assessment": list,
+                    "technical_gaps": list,
+                    "interview_questions": list,
+                    "recommendation": str,
+                    "key_findings": list,
+                    "concerns": list
+                }
+                
+                missing_fields = []
+                invalid_types = []
+                
+                for field, field_type in required_fields.items():
+                    if field not in result:
+                        missing_fields.append(field)
+                        result[field] = [] if field_type == list else (0 if field_type == int else "")
+                    elif not isinstance(result[field], field_type):
+                        invalid_types.append(f"{field} (expected {field_type.__name__})")
+                        # Convert to correct type
+                        if field_type == list:
+                            result[field] = [result[field]] if result[field] else []
+                        elif field_type == int:
+                            try:
+                                result[field] = int(float(result[field]))
+                            except (ValueError, TypeError):
+                                result[field] = 0
+                        else:
+                            result[field] = str(result[field])
+
+                if missing_fields:
+                    logger.warning(f"Missing fields in LLM response: {missing_fields}")
+                if invalid_types:
+                    logger.warning(f"Invalid field types in LLM response: {invalid_types}")
+                
+                # Log final processed result
+                logger.debug(f"Final processed result: {json.dumps(result, indent=2)}")
+                
+                return result
+                
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON parsing error: {str(e)}")
+                logger.error(f"Problematic content: {content[:500]}...")  # Log problematic content
+                return self._get_fallback_technical_response(technical_score, recommendation)
+                
         except Exception as e:
             logger.error(f"Mixtral analysis failed: {str(e)}")
+            logger.error(f"Full error details: {traceback.format_exc()}")
             return self._get_fallback_technical_response(technical_score, recommendation)
 
     def _get_fallback_technical_response(self, technical_score=0, recommendation="NO_MATCH"):
@@ -479,42 +415,67 @@ Remember: Return ONLY the JSON object with proper formatting."""
         return {
             "technical_match_score": technical_score,
             "confidence_score": technical_score,
-            "skills_assessment": [],
+            "skills_assessment": [
+                {
+                    "skill": "Unable to assess",
+                    "proficiency": "Unknown",
+                    "years": 0
+                }
+            ],
             "technical_gaps": ["Error analyzing skills"],
-            "interview_questions": [],
+            "interview_questions": [
+                "What are your core technical skills?",
+                "Can you describe your most relevant experience?",
+                "What is your experience with the required technologies?"
+            ],
             "recommendation": recommendation,
-            "key_findings": ["Error during analysis"],
-            "concerns": ["Unable to complete analysis"]
+            "key_findings": [
+                "Technical skills assessment incomplete",
+                "Manual review recommended"
+            ],
+            "concerns": ["Unable to complete detailed analysis"]
         }
 
     def _gemini_experience_analysis(self, resume_text, role_name):
         """Analyze and classify work experience using Gemini"""
         try:
+            # Clean and normalize the resume text
+            resume_text = self._clean_text(resume_text)
+            
             prompt = (
                 "You are an expert resume analyzer. "
                 "Create a structured analysis of the candidate's work experience "
-                "focusing on location and type of experience.\n\n"
+                "focusing on location, duration, and potential red flags.\n\n"
                 f"Role: {role_name}\n"
                 f"Resume:\n{resume_text}\n\n"
                 "Instructions:\n"
                 "1. Calculate years of experience by location and type\n"
-                "2. Break down each role into components\n"
-                "3. Evaluate overall experience strength\n"
-                "4. Identify any potential flags or gaps\n\n"
+                "2. Identify short-term positions (less than 1 year)\n"
+                "3. Identify employment gaps (more than 6 months)\n"
+                "4. Evaluate overall experience strength\n"
+                "5. Flag any concerning patterns\n\n"
                 "Format your response EXACTLY like this example with quoted property names:\n"
                 '{\n'
                 '  "us_experience_years": 5.5,\n'
                 '  "non_us_experience_years": 2.0,\n'
                 '  "total_professional_years": 7.5,\n'
                 '  "internship_count": 1,\n'
+                '  "short_stints": [\n'
+                '    "Company A: 4 months",\n'
+                '    "Company B: 8 months"\n'
+                '  ],\n'
+                '  "experience_gaps": [\n'
+                '    "1.5 year gap between Company B and C"\n'
+                '  ],\n'
                 '  "experience_breakdown": [\n'
                 '    "5 years software development",\n'
                 '    "2 years project management"\n'
                 '  ],\n'
                 '  "experience_strength": "STRONG",\n'
                 '  "experience_flags": [\n'
-                '    "Multiple role changes",\n'
-                '    "Gap in employment"\n'
+                '    "Multiple short-term positions",\n'
+                '    "Significant employment gap",\n'
+                '    "Limited US experience"\n'
                 '  ]\n'
                 '}\n\n'
                 'Important:\n'
@@ -539,92 +500,82 @@ Remember: Return ONLY the JSON object with proper formatting."""
                 "candidate_count": 1   # Generate only one response
             }
 
-            # Updated safety settings to be more permissive while maintaining professionalism
+            # Updated safety settings to be more permissive
             safety_settings = [
                 {
-                    "category": "HARM_CATEGORY_DEROGATORY",
-                    "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+                    "category": "HARM_CATEGORY_HARASSMENT",
+                    "threshold": "BLOCK_NONE"
                 },
                 {
-                    "category": "HARM_CATEGORY_TOXICITY",
-                    "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+                    "category": "HARM_CATEGORY_HATE_SPEECH",
+                    "threshold": "BLOCK_NONE"
                 },
                 {
-                    "category": "HARM_CATEGORY_VIOLENCE",
-                    "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+                    "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                    "threshold": "BLOCK_ONLY_HIGH"
                 },
                 {
-                    "category": "HARM_CATEGORY_SEXUAL",
-                    "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-                },
-                {
-                    "category": "HARM_CATEGORY_MEDICAL",
-                    "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-                },
-                {
-                    "category": "HARM_CATEGORY_DANGEROUS",
-                    "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+                    "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                    "threshold": "BLOCK_ONLY_HIGH"
                 }
             ]
 
-            # Make the API call
             response = self.gemini_client.generate_content(
                 contents=prompt,
                 generation_config=generation_config,
                 safety_settings=safety_settings
             )
-
-            if not response or not response.text:
-                logger.error("Empty response from Gemini")
-                return self._get_fallback_experience_response()
+            
+            if hasattr(response, 'prompt_feedback'):
+                safety_ratings = response.prompt_feedback.safety_ratings
+                for rating in safety_ratings:
+                    if rating.probability >= rating.threshold:
+                        logger.warning(f"Content blocked: {rating.category}")
+                        return self._get_fallback_experience_response()
 
             # Get and clean the response
             raw_text = response.text.strip()
             logger.info("Received Gemini response")
 
-            try:
-                # Extract and parse JSON content
-                json_str = self._extract_json_from_text(raw_text)
-                result = json.loads(json_str)
-                
-                # Validate required fields
-                required_fields = [
-                    'us_experience_years', 'non_us_experience_years',
-                    'total_professional_years', 'internship_count',
-                    'experience_breakdown', 'experience_strength',
-                    'experience_flags'
-                ]
-                
-                for field in required_fields:
-                    if field not in result:
-                        raise ValueError(f"Missing required field: {field}")
+            # Extract and parse JSON content
+            json_str = self._extract_json_from_text(raw_text)
+            result = json.loads(json_str)
+            
+            # Validate required fields
+            required_fields = [
+                'us_experience_years', 'non_us_experience_years',
+                'total_professional_years', 'internship_count',
+                'short_stints', 'experience_gaps',
+                'experience_breakdown', 'experience_strength',
+                'experience_flags'
+            ]
+            
+            for field in required_fields:
+                if field not in result:
+                    raise ValueError(f"Missing required field: {field}")
 
-                # Convert numeric fields with dict comprehension
-                numeric_fields = {
-                    'us_experience_years': float,
-                    'non_us_experience_years': float,
-                    'total_professional_years': float,
-                    'internship_count': int
-                }
-                
-                for field, converter in numeric_fields.items():
-                    try:
-                        result[field] = converter(result[field])
-                    except (TypeError, ValueError) as e:
-                        logger.error(f"Error converting {field}: {str(e)}")
-                        result[field] = converter(0)
+            # Convert numeric fields with dict comprehension
+            numeric_fields = {
+                'us_experience_years': float,
+                'non_us_experience_years': float,
+                'total_professional_years': float,
+                'internship_count': int
+            }
+            
+            for field, converter in numeric_fields.items():
+                try:
+                    result[field] = converter(result[field])
+                except (TypeError, ValueError) as e:
+                    logger.error(f"Error converting {field}: {str(e)}")
+                    result[field] = converter(0)
 
-                # Ensure arrays are never null
-                array_fields = ['experience_breakdown', 'experience_flags']
-                for field in array_fields:
-                    if field not in result or result[field] is None:
-                        result[field] = []
+            # Ensure arrays are never null
+            array_fields = ['short_stints', 'experience_gaps', 'experience_breakdown', 'experience_flags']
+            for field in array_fields:
+                if field not in result or result[field] is None:
+                    result[field] = []
 
-                return result
-
-            except Exception as e:
-                logger.error(f"JSON parsing error: {str(e)}")
-                return self._get_fallback_experience_response()
+            return result
 
         except Exception as e:
             logger.error(f"Experience analysis failed: {str(e)}")
@@ -637,6 +588,8 @@ Remember: Return ONLY the JSON object with proper formatting."""
             "non_us_experience_years": 0,
             "total_professional_years": 0,
             "internship_count": 0,
+            "short_stints": [],
+            "experience_gaps": [],
             "experience_breakdown": [],
             "experience_strength": "LIMITED",
             "experience_flags": ["Error analyzing experience"]

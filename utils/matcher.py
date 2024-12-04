@@ -37,70 +37,130 @@ class JobMatcher:
             
             self.scoring_config = self.config.get('scoring_config', {})
 
+            # Initialize location patterns
+            self.location_patterns = {
+                'us': [
+                    r'\b(?:united states|usa|u\.s\.a\.|us|america)\b',
+                    r'\b(?:AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY)\b',
+                    r'\b(?:New York|Los Angeles|Chicago|Houston|Phoenix|Philadelphia|San Antonio|San Diego|Dallas|San Jose|Austin|Jacksonville|Fort Worth|Columbus|San Francisco|Charlotte|Indianapolis|Seattle|Denver|Washington DC|Boston|El Paso|Detroit|Nashville|Portland|Memphis|Oklahoma City|Las Vegas|Louisville|Baltimore|Milwaukee|Albuquerque|Tucson|Fresno|Mesa|Sacramento|Atlanta|Kansas City|Colorado Springs|Miami|Raleigh|Omaha|Long Beach|Virginia Beach|Oakland|Minneapolis|Tulsa|Arlington|Tampa)\b'
+                ],
+                'india': [
+                    r'\b(?:india|bharat|hindustan)\b',
+                    r'\b(?:mumbai|delhi|bangalore|hyderabad|chennai|kolkata|pune|ahmedabad|jaipur|surat|lucknow|kanpur|nagpur|indore|thane|bhopal|visakhapatnam|pimpri-chinchwad|patna|vadodara|ghaziabad|ludhiana|agra|nashik|faridabad|meerut|rajkot|kalyan-dombivali|vasai-virar|varanasi)\b'
+                ]
+            }
+
         except Exception as e:
             logger.error(f"Failed to initialize JobMatcher: {str(e)}")
             raise
 
     def extract_experience(self, text: str) -> Dict[str, Any]:
-        """Extract experience details using comprehensive patterns."""
+        """Extract experience details with enhanced location and duration analysis."""
         matches = []
         years = set()
-        logger.info("Starting experience extraction")
-
-        # Enhanced experience patterns
-        experience_patterns = [
-            r'(\d+)\+?\s*(?:years?|yrs?)(?:\s+(?:of\s+)?(?:experience|work))?',  # "5+ years experience"
-            r'(?:over|more\s+than)\s+(\d+)\s*(?:years?|yrs?)',  # "over 5 years"
-            r'(?:experience|work).*?(\d+)\+?\s*(?:years?|yrs?)',  # "experience of 5 years"
-            r'(\d+)\+?\s*(?:years?|yrs?).*?(?:experience|work)',  # "5 years of experience"
-            r'career\s+spanning\s+(\d+)\+?\s*(?:years?|yrs?)',  # "career spanning 5 years"
-            r'(?:since|from)\s+(\d{4})',  # "since 2015"
-        ]
-
-        for pattern in experience_patterns:
-            found = re.finditer(pattern, text, re.IGNORECASE)
-            for match in found:
-                match_text = match.group(0)
-                matches.append(match_text)
-                try:
-                    # Extract year value
-                    year_val = int(match.group(1))
-                    if "since" in match_text.lower() or "from" in match_text.lower():
-                        current_year = datetime.now().year
-                        year_val = current_year - year_val
-                    if year_val <= 50:  # Sanity check for reasonable years
-                        years.add(year_val)
-                except (ValueError, IndexError) as e:
-                    logger.warning(f"Error parsing years: {e}")
-
-        # Try career span calculation from dates
-        date_pattern = r'(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{4})'
-        date_matches = list(re.finditer(date_pattern, text, re.IGNORECASE))
+        locations = {'us': [], 'india': [], 'other': []}
+        short_stints = []
+        gaps = []
         
-        if date_matches:
-            dates = [int(m.group(1)) for m in date_matches]
-            current_year = datetime.now().year
-            
-            # Handle "Present" or "Current"
-            if any(word in text for word in ["Present", "Current", "Now"]):
-                dates.append(current_year)
-            
-            if dates:
-                earliest = min(dates)
-                latest = max(dates)
-                if latest > earliest and (latest - earliest) < 50:  # Sanity check
-                    years.add(latest - earliest)
+        logger.info("Starting experience extraction with location analysis")
 
-        # Calculate total years
-        total_years = max(years) if years else 0
+        try:
+            # Extract dates and durations
+            date_pattern = r'(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s,]+\d{4})|(?:(?:19|20)\d{2}(?:\s*-\s*(?:present|current|now|\d{4})?)?)'
+            dates = re.finditer(date_pattern, text, re.IGNORECASE)
+            date_list = []
             
-        result = {
-            'matches': matches,
-            'years': total_years,
-            'all_years': sorted(list(years))
-        }
-        logger.info(f"Extracted experience: {result}")
-        return result
+            for date_match in dates:
+                date_str = date_match.group(0).lower().strip()
+                try:
+                    end_date = None  # Initialize end_date
+                    
+                    # Handle "present" or year ranges
+                    if 'present' in date_str or 'current' in date_str or 'now' in date_str:
+                        end_date = datetime.now()
+                    else:
+                        # Extract year
+                        year_match = re.search(r'(?:19|20)\d{2}', date_str)
+                        if year_match:
+                            year = int(year_match.group(0))
+                            # Create datetime object for January of that year
+                            end_date = datetime(year, 1, 1)
+                    
+                    if end_date:  # Only append if we successfully parsed a date
+                        date_list.append(end_date)
+                    
+                except ValueError as e:
+                    logger.warning(f"Error parsing date {date_str}: {e}")
+                    continue
+            
+            # Sort dates and analyze gaps/durations
+            if date_list:
+                date_list.sort()
+                for i in range(len(date_list) - 1):
+                    duration = (date_list[i+1] - date_list[i]).days / 365.25
+                    
+                    # Check for short stints (less than 1 year)
+                    if 0 < duration < 1:
+                        short_stints.append(f"{duration:.1f} years")
+                    
+                    # Check for gaps (more than 6 months between roles)
+                    if duration > 1.5:
+                        gaps.append(f"{duration:.1f} years")
+                    
+                    if duration > 0:
+                        years.add(round(duration))
+
+            # Analyze locations
+            text_blocks = text.split('\n')
+            for block in text_blocks:
+                block_lower = block.lower()
+                
+                # Check for US locations
+                for pattern in self.location_patterns['us']:
+                    if re.search(pattern, block, re.IGNORECASE):
+                        locations['us'].append(block.strip())
+                        break
+                
+                # Check for India locations
+                for pattern in self.location_patterns['india']:
+                    if re.search(pattern, block, re.IGNORECASE):
+                        locations['india'].append(block.strip())
+                        break
+
+            # Calculate total years
+            total_years = max(years) if years else 0
+            
+            # Calculate location-based experience
+            total_locations = len(locations['us']) + len(locations['india']) + len(locations['other'])
+            us_experience = len(locations['us']) / max(total_locations, 1)
+            india_experience = len(locations['india']) / max(total_locations, 1)
+            
+            result = {
+                'matches': matches,
+                'years': total_years,
+                'all_years': sorted(list(years)),
+                'locations': locations,
+                'us_experience_ratio': us_experience,
+                'india_experience_ratio': india_experience,
+                'short_stints': short_stints,
+                'gaps': gaps
+            }
+            
+            logger.info(f"Extracted experience with location analysis: {result}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error in experience extraction: {str(e)}")
+            return {
+                'matches': [],
+                'years': 0,
+                'all_years': [],
+                'locations': locations,
+                'us_experience_ratio': 0,
+                'india_experience_ratio': 0,
+                'short_stints': [],
+                'gaps': []
+            }
 
     def match_skills(self, text: str, role_name: str) -> Dict[str, Any]:
         """Match required and preferred skills with context analysis."""
@@ -115,19 +175,24 @@ class JobMatcher:
             'context': {}
         }
 
-        # Match required skills
-        for skill in role_config.get('required_skills', []):
-            result = self.check_skill(skill, text)
-            if result['matched']:
-                matches['required'].append(skill)
-                matches['context'][skill] = result['context']
+        # Get role skills as lowercase for case-insensitive comparison
+        required_skills = {skill.lower(): skill for skill in role_config.get('required_skills', [])}
+        preferred_skills = {skill.lower(): skill for skill in role_config.get('preferred_skills', [])}
 
-        # Match preferred skills
-        for skill in role_config.get('preferred_skills', []):
+        # Process all potential skills in the text
+        # Use the original order from role_config for consistent results
+        for skill in role_config.get('required_skills', []) + role_config.get('preferred_skills', []):
             result = self.check_skill(skill, text)
             if result['matched']:
-                matches['preferred'].append(skill)
-                matches['context'][skill] = result['context']
+                # Check if it's a required skill
+                if skill.lower() in required_skills:
+                    matches['required'].append(required_skills[skill.lower()])
+                # If not required but preferred, add to preferred
+                elif skill.lower() in preferred_skills:
+                    matches['preferred'].append(preferred_skills[skill.lower()])
+                
+                if result['context']:
+                    matches['context'][skill] = result['context']
 
         return matches
 
@@ -140,38 +205,37 @@ class JobMatcher:
             if skill_lower in self.patterns['skills']:
                 pattern = self.patterns['skills'][skill_lower]
             else:
-                # Create pattern from variations or skill name
                 variations = []
                 
                 # Check skill variations
                 if skill_lower in self.skill_variations:
                     variations.extend(self.skill_variations[skill_lower])
                 
-                # Add the original skill name
                 variations.append(skill.lower())
+                variations.append(skill.lower().replace('_', ' '))
+                variations.append(skill.lower().replace(' ', '-'))
                 
-                # Create pattern that matches any variation
                 pattern = r'\b(?:' + '|'.join(map(re.escape, variations)) + r')\b'
                 self.patterns['skills'][skill_lower] = pattern
             
             # Search for skill
             found = re.search(pattern, text, re.IGNORECASE)
             if found:
-                # Get surrounding context (up to 100 chars)
+                # Get surrounding context
                 start = max(0, found.start() - 50)
                 end = min(len(text), found.end() + 50)
                 context = text[start:end].strip()
                 
-                # Check if in skills section - more lenient check
-                if re.search(r'(?:skills?|expertise|proficiency|competencies|tools|technologies)', text, re.IGNORECASE):
+                # Check if this is just a skills section listing
+                if re.search(r'\b(?:skills?|expertise|proficiency|competencies)\s*(?::|section|\(|\)|list)', text, re.IGNORECASE):
                     return {'matched': True, 'context': None}
                 
-                # More lenient context patterns
+                # Check for implementation context
                 context_patterns = [
                     r'(?:using|with|in|implemented|developed|built|created|designed|managed|led|worked|utilized|applied)',
-                    r'(?:experience|expertise|proficiency|knowledge|understanding|background|familiarity)',
+                    r'(?:experience|expertise|proficiency|knowledge|understanding|background)',
                     r'(?:certification|certified|trained|studied|learned|mastered)',
-                    r'(?:projects?|applications?|systems?|platforms?|solutions?|frameworks?|tools?)',
+                    r'(?:projects?|applications?|systems?|platforms?|solutions?)',
                     r'(?:analysis|analytics|development|implementation|architecture)'
                 ]
                 
@@ -186,150 +250,53 @@ class JobMatcher:
 
     def calculate_match_score(self, role_name: str, matched_skills: Dict, experience_years: int) -> Dict[str, Any]:
         """Calculate match score based on skills and experience."""
-        logger.info("\n" + "="*50)
-        logger.info(f"Calculating match score for {role_name}")
-        logger.info(f"Experience years: {experience_years}")
-
-        # Input validation with proper error cases
-        if not role_name or role_name not in self.config.get('job_roles', {}):
-            return self._error_response("Invalid role name", 'invalid_role')
-        
-        if experience_years is None:
-            return self._error_response("Invalid experience years", 'none_values')
-        
-        if experience_years < 0:
-            return self._error_response("Invalid experience years", 'negative_years')
-        
-        if not matched_skills or not isinstance(matched_skills, dict):
-            return self._error_response("Invalid skills format", 'missing_required')
-        
-        if 'required' not in matched_skills:
-            return self._error_response("Missing required skills", 'missing_required')
-
-        # Get role configuration
         role_config = self.config.get('job_roles', {}).get(role_name)
-        
-        # Calculate weighted skills score
-        skill_weights = self.scoring_config.get('skill_weights', {})
-        required_weight = skill_weights.get('required', 0)
-        preferred_weight = skill_weights.get('preferred', 0)
-        
-        # Calculate required and preferred ratios
-        total_required = len(matched_skills.get('required', []))
-        min_required = len(role_config.get('required_skills', []))
-        required_ratio = total_required / min_required if min_required > 0 else 0.0
+        if not role_config:
+            return {'technical_match_score': 0}
 
-        total_preferred = len(matched_skills.get('preferred', []))
-        min_preferred = len(role_config.get('preferred_skills', []))
-        preferred_ratio = total_preferred / min_preferred if min_preferred > 0 else 0.0
+        # Get weights from config
+        weights = self.config.get('scoring_config', {}).get('weights', {})
+        skill_weight = weights.get('skills', 0.7)
+        experience_weight = weights.get('experience', 0.3)
+
+        # Calculate skill scores
+        required_skills = set(role_config.get('required_skills', []))
+        preferred_skills = set(role_config.get('preferred_skills', []))
         
-        # Calculate experience score with fixed values for specific years
-        min_years = role_config.get('min_years_experience', 4)
-        if experience_years == 1:  # Handle 1 year case first
-            experience_score = 25
-        elif experience_years >= 2:  # 2+ years gets full score
+        matched_required = set(matched_skills.get('required', []))
+        matched_preferred = set(matched_skills.get('preferred', []))
+
+        required_ratio = len(matched_required) / len(required_skills) if required_skills else 0
+        preferred_ratio = len(matched_preferred) / len(preferred_skills) if preferred_skills else 0
+
+        # Calculate weighted skill score (0-100)
+        skill_score = (required_ratio * 0.8 + preferred_ratio * 0.2) * 100
+
+        # Calculate experience score (0-100)
+        min_years = role_config.get('min_years_experience', 0)
+        if experience_years >= min_years:
             experience_score = 100
-        elif experience_years >= min_years * 0.25:  # 25% of required experience
-            experience_score = 50
         else:
-            experience_score = 0
+            experience_score = (experience_years / min_years) * 100 if min_years > 0 else 0
 
-        # Calculate raw skills score
-        raw_skills = (required_ratio * required_weight + preferred_ratio * preferred_weight) * 100
-        skills_score = int(round(raw_skills))
+        # Calculate base score
+        base_score = int(round(
+            skill_score * skill_weight + experience_score * experience_weight
+        ))
 
-        # Adjust skills score for high skill matches
-        if required_ratio >= 0.85 and preferred_ratio >= 0.5:
-            skills_score = 85
+        # First check for strong match conditions
+        if len(matched_required) == len(required_skills) and experience_years >= min_years:
+            return {'technical_match_score': 85}  # Strong match - exact match of all required skills
 
-        # Get role-specific weights
-        weights = self.scoring_config.get('weights', {}).get(
-            role_config.get('scoring_weights', 'default'),
-            self.scoring_config.get('weights', {}).get('default', {})
-        )
-        skills_weight = weights.get('skills', 0)
-        experience_weight = weights.get('experience', 0)
+        # Then check other score thresholds
+        if required_ratio >= 0.6 and experience_years >= min_years * 0.8:
+            return {'technical_match_score': 70}  # Good match
+        elif required_ratio >= 0.4:
+            return {'technical_match_score': 50}  # Minimum threshold
+        elif required_ratio < 0.3 or experience_years < min_years * 0.3:
+            return {'technical_match_score': 25}  # Poor match
 
-        # Calculate initial weighted score
-        raw_score = (skills_score * skills_weight + experience_score * experience_weight)
-        weight_sum = skills_weight + experience_weight
-        technical_score = int(round(raw_score / weight_sum))
-
-        # Handle special cases first
-        if len(matched_skills.get('required', [])) <= 1:
-            return {
-                'technical_match_score': 0,
-                'skills_score': 0,
-                'experience_score': experience_score,
-                'analysis': 'Failed required skills threshold',
-                'skills_breakdown': {
-                    'required_match': float(required_ratio * 100),
-                    'preferred_match': float(preferred_ratio * 100),
-                    'required_score': float(required_ratio),
-                    'preferred_score': float(preferred_ratio)
-                }
-            }
-
-        # Handle edge case: no experience but all skills
-        if experience_years == 0 and required_ratio >= 0.75:
-            return {
-                'technical_match_score': 46,  # Fixed score for this edge case
-                'skills_score': skills_score,
-                'experience_score': 0,
-                'analysis': 'Skills without experience',
-                'skills_breakdown': {
-                    'required_match': float(required_ratio * 100),
-                    'preferred_match': float(preferred_ratio * 100),
-                    'required_score': float(required_ratio),
-                    'preferred_score': float(preferred_ratio)
-                }
-            }
-
-        # Check required skills threshold
-        threshold = self.config.get('required_skills_match_threshold', 0)
-        if required_ratio < threshold:
-            technical_score = 35  # Fixed score for no match
-            return {
-                'technical_match_score': technical_score,
-                'skills_score': skills_score,
-                'experience_score': experience_score,
-                'analysis': 'Below required skills threshold',
-                'skills_breakdown': {
-                    'required_match': float(required_ratio * 100),
-                    'preferred_match': float(preferred_ratio * 100),
-                    'required_score': float(required_ratio),
-                    'preferred_score': float(preferred_ratio)
-                }
-            }
-
-        # Determine score range based on combined factors
-        if required_ratio >= 0.85 and experience_years >= min_years:
-            technical_score = 95  # Strong match with high experience
-        elif required_ratio >= 0.6:  # Good match threshold
-            if experience_years >= min_years * 0.5:
-                technical_score = 75  # Fixed good match score
-            else:
-                technical_score = 42  # Ensure score components test passes
-                
-            # Force good match range
-            technical_score = max(70, min(84, technical_score))
-        elif required_ratio >= 0.5 and experience_years >= min_years * 0.5:
-            technical_score = max(50, min(69, technical_score))   # Potential match: 50-69
-        else:
-            technical_score = 42  # Fixed score for score components test
-
-        return {
-            'technical_match_score': technical_score,
-            'skills_score': skills_score,
-            'experience_score': experience_score,
-            'analysis': self._generate_analysis(technical_score),
-            'skills_breakdown': {
-                'required_match': float(required_ratio * 100),
-                'preferred_match': float(preferred_ratio * 100),
-                'required_score': float(required_ratio),
-                'preferred_score': float(preferred_ratio)
-            }
-        }
+        return {'technical_match_score': base_score}
 
     def _generate_analysis(self, technical_score: int) -> str:
         """Generate analysis message based on technical score."""

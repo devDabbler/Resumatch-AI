@@ -2,7 +2,7 @@ import streamlit as st
 import yaml
 import json
 import logging
-from utils.pdf import PDFProcessor
+from utils.pdf import PDFProcessor, DOCXProcessor, DocumentProcessor
 from utils.matcher import JobMatcher
 from utils.llm import LLMAnalyzer
 from utils.report_generator import ReportGenerator
@@ -164,6 +164,28 @@ def display_results(analysis_results: Dict, rank: int = None):
                 )
             st.markdown("</div>", unsafe_allow_html=True)
 
+        # Display skills assessment if available
+        if analysis_results.get("skills_assessment"):
+            st.markdown("### 🔍 Skills Assessment")
+            for skill in analysis_results["skills_assessment"]:
+                st.markdown(
+                    f"""
+                    <div style='margin-bottom: 0.8rem; padding: 0.8rem;
+                         background: #f8f9fa; border-radius: 8px;'>
+                        <strong>{skill['skill']}</strong><br/>
+                        Proficiency: {skill['proficiency']}<br/>
+                        Years: {skill['years']}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+        # Display technical gaps if available
+        if analysis_results.get("technical_gaps"):
+            st.markdown("### 🎯 Technical Gaps")
+            for gap in analysis_results["technical_gaps"]:
+                st.markdown(f"- {gap}")
+
     except Exception as e:
         logger.error(f"Error displaying results: {str(e)}")
         st.error("Error displaying results")
@@ -257,6 +279,7 @@ def evaluation_page():
     # Initialize components
     config = load_config()
     pdf_processor = PDFProcessor()
+    docx_processor = DOCXProcessor()
     job_matcher = JobMatcher('config/jobs.yaml')
     llm_analyzer = LLMAnalyzer()
 
@@ -286,10 +309,10 @@ def evaluation_page():
 
         # Multiple file upload
         uploaded_files = st.file_uploader(
-            "Upload Resumes (PDF)",
-            type=["pdf"],
+            "Upload Resumes (PDF/DOCX)",
+            type=["pdf", "docx"],
             accept_multiple_files=True,
-            help="Upload up to 5 PDF resumes to analyze"
+            help="Upload up to 5 resumes in PDF or DOCX format"
         )
 
         if uploaded_files:
@@ -312,11 +335,18 @@ def evaluation_page():
                         # Process each resume
                         for file in uploaded_files:
                             logger.info(f"Processing resume: {file.name}")
-                            # Process PDF
-                            resume_text = pdf_processor.extract_text(file)
-                            resume_sections = pdf_processor.extract_sections(
-                                resume_text
-                            )
+                            
+                            # Process based on file type
+                            if file.name.lower().endswith('.pdf'):
+                                resume_text = pdf_processor.extract_text(file)
+                            elif file.name.lower().endswith('.docx'):
+                                resume_text = docx_processor.extract_text(file)
+                            else:
+                                logger.warning(f"Unsupported file type: {file.name}")
+                                continue
+                                
+                            # Extract sections using DocumentProcessor
+                            resume_sections = DocumentProcessor.extract_sections(resume_text)
 
                             # Match patterns
                             experience_matches = job_matcher.extract_experience(
@@ -330,7 +360,7 @@ def evaluation_page():
                             # LLM Analysis
                             analysis_results = llm_analyzer.analyze_resume(
                                 resume_text,
-                                selected_role,  # Pass role name instead of config
+                                selected_role,
                                 skill_matches,
                                 experience_matches['matches'] if experience_matches else []
                             )

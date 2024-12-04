@@ -8,3 +8,4 @@ PyPDF2
 PyMuPDF
 regex
 reportlab>=4.1.0
+python-docx
