@@ -20,6 +20,9 @@ def setup_logging():
         '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
     )
     
+    # Ensure logs directory exists before creating handlers
+    os.makedirs('logs', exist_ok=True)
+    
     # Set up rotating file handler for detailed logging (10MB per file, keep 5 backup files)
     file_handler = RotatingFileHandler(
         'logs/detailed_matching.log',
@@ -40,9 +43,6 @@ def setup_logging():
     
     # Remove any existing handlers to prevent duplication
     root_logger.handlers = []
-    
-    # Ensure logs directory exists
-    os.makedirs('logs', exist_ok=True)
     
     root_logger.addHandler(file_handler)
     root_logger.addHandler(console_handler)
