@@ -38,6 +38,15 @@ def display_results(analysis_results: Dict, rank: int = None):
             st.json(analysis_results)
             return
 
+        # Get experience details
+        experience_details = analysis_results.get('experience_details', {})
+        experience_summary = experience_details.get('experience_summary', {})
+        
+        # Get years from experience summary
+        total_years = experience_summary.get('total_professional_years', 0)
+        us_years = experience_summary.get('us_experience_years', 0)
+        non_us_years = experience_summary.get('non_us_experience_years', 0)
+
         # Add Download PDF section at the top
         st.markdown("### 📊 Analysis Report")
         try:
@@ -80,6 +89,17 @@ def display_results(analysis_results: Dict, rank: int = None):
                 unsafe_allow_html=True
             )
 
+        # Display experience breakdown
+        st.subheader("Experience Overview")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Total Experience", f"{total_years:.1f} years")
+        with col2:
+            st.metric("US Experience", f"{us_years:.1f} years")
+        with col3:
+            st.metric("Non-US Experience", f"{non_us_years:.1f} years")
+
         # Initialize recommendation color
         recommendation_color = "#ffc107"  # Default warning yellow
 
@@ -98,7 +118,7 @@ def display_results(analysis_results: Dict, rank: int = None):
             recommendation_color = "#17a2b8"  # Bootstrap info blue
         else:
             st.warning("⚠️ Not a Match - Do Not Proceed")
-
+            
         # Display match score with visual meter
         score = analysis_results['technical_match_score']
         st.markdown(
@@ -168,17 +188,29 @@ def display_results(analysis_results: Dict, rank: int = None):
         if analysis_results.get("skills_assessment"):
             st.markdown("### 🔍 Skills Assessment")
             for skill in analysis_results["skills_assessment"]:
-                st.markdown(
-                    f"""
-                    <div style='margin-bottom: 0.8rem; padding: 0.8rem;
-                         background: #f8f9fa; border-radius: 8px;'>
-                        <strong>{skill['skill']}</strong><br/>
-                        Proficiency: {skill['proficiency']}<br/>
-                        Years: {skill['years']}
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+                try:
+                    # Extract skill data with proper error handling
+                    skill_name = skill.get('skill', 'Unknown Skill')
+                    proficiency = skill.get('proficiency', 'Not Specified')
+                    years = skill.get('years', 0)
+                    context = skill.get('context', '')
+
+                    st.markdown(
+                        f"""
+                        <div style='margin-bottom: 0.8rem; padding: 0.8rem;
+                             background: #f8f9fa; border-radius: 8px;'>
+                            <strong>{skill_name}</strong><br/>
+                            <span style='color: #666;'>Proficiency:</span> {proficiency}<br/>
+                            <span style='color: #666;'>Experience:</span> {years} year(s)
+                            {f"<br/><span style='color: #666;'>Context:</span> {context}" if context else ""}
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                except Exception as e:
+                    logger.warning(f"Error displaying skill: {str(e)}")
+                    # Display raw skill data for debugging
+                    st.markdown(f"```\n{skill}\n```")
 
         # Display technical gaps if available
         if analysis_results.get("technical_gaps"):
