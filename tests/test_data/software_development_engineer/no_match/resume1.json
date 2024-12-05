@@ -1,0 +1,60 @@
+{
+    "candidate_name": "Ayush Oturkar",
+    "expected_score": 40.0,
+    "years_experience": 5,
+    "education": {
+        "level": "Masters",
+        "field": "Statistics-Data Science",
+        "relevance": "minimal"
+    },
+    "expected_skills": {
+        "required_skills": [
+            "Python",
+            "SQL",
+            "Git"
+        ],
+        "preferred_skills": [
+            "AWS",
+            "Azure",
+            "Docker",
+            "MLflow"
+        ]
+    },
+    "technical_competencies": {
+        "frontend": [],
+        "backend": {
+            "languages": ["Python", "R", "SQL"],
+            "frameworks": ["PyTorch", "TensorFlow", "Scikit-learn"],
+            "databases": ["SQL Server", "Redshift"]
+        },
+        "devops": {
+            "tools": ["Git", "MLflow", "Docker"],
+            "cloud": ["AWS", "Azure"]
+        }
+    },
+    "domain_expertise": [
+        "Machine Learning",
+        "Statistical Analysis",
+        "Deep Learning",
+        "Data Science",
+        "MLOps"
+    ],
+    "impact_metrics": [
+        "$1M EBIDTA savings",
+        "90% reduction in false positives",
+        "2.5% increase in sales",
+        "99% reduction in manual efforts"
+    ],
+    "notes": "Pure data science background with no software engineering experience. Missing critical frontend/backend technologies and frameworks. Wrong domain expertise entirely.",
+    "expected_scores": {
+        "skills_match": 35,
+        "experience_match": 40,
+        "role_relevance": 30,
+        "technical_score": {
+            "frontend": 0.0,
+            "backend": 0.40,
+            "devops": 0.45,
+            "core_cs": 0.35
+        }
+    }
+}

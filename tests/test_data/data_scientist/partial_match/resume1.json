@@ -1,42 +1,58 @@
 {
-    "candidate_name": "Sarah Johnson",
-    "expected_score": 60.0,
-    "years_experience": 2,
+    "candidate_name": "Jason Youk",
+    "expected_score": 72.0,
+    "years_experience": 6,
     "education": {
         "level": "Bachelors",
-        "field": "Computer Science",
-        "relevance": "partial"
+        "field": "Marketing",
+        "relevance": "indirect"
     },
     "expected_skills": {
         "required_skills": [
             "Python",
-            "Basic ML",
-            "SQL"
+            "SQL",
+            "Data Visualization",
+            "Statistical Analysis"
         ],
         "preferred_skills": [
-            "Pandas",
-            "NumPy",
-            "Matplotlib"
+            "Hive",
+            "Presto",
+            "Spark",
+            "Tableau",
+            "Redash",
+            "Plotly"
         ]
     },
     "technical_competencies": {
-        "ml_frameworks": ["Basic Scikit-learn"],
-        "big_data": ["SQL"],
-        "cloud_platforms": ["Basic AWS"]
+        "data_tools": ["Python", "SQL", "Tableau", "Redash"],
+        "big_data": ["Hive", "Presto", "Spark"],
+        "analytics": ["A/B Testing", "Statistical Analysis"],
+        "automation": ["ETL Pipelines", "Python Scripting"]
     },
     "domain_expertise": [
-        "Data Analysis",
-        "Basic Machine Learning"
+        "Product Analytics",
+        "SEO Analytics",
+        "A/B Testing",
+        "Data Pipeline Development",
+        "Data Visualization"
     ],
     "impact_metrics": [
-        "Built basic ML models",
-        "Created data dashboards",
-        "Automated data cleaning processes"
+        "Implemented ETL pipelines for large-scale data processing",
+        "Developed automated data analysis workflows",
+        "Created real-time business analytics dashboards",
+        "Optimized SEO performance metrics"
     ],
-    "notes": "Junior data scientist with potential but needs more experience",
+    "notes": "Strong in analytics and data engineering, but limited ML/AI experience. Good technical foundation with room for growth in advanced DS areas.",
     "expected_scores": {
-        "skills_match": 60,
-        "experience_match": 55,
-        "role_relevance": 50
+        "skills_match": 70,
+        "experience_match": 75,
+        "role_relevance": 65,
+        "technical_score": {
+            "skills": 0.70,
+            "platform_specific_experience": 0.75,
+            "experience": 0.75,
+            "role_relevance": 0.65,
+            "us_market_fit": 0.80
+        }
     }
 }

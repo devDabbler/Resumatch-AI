@@ -1,43 +1,58 @@
 {
-    "candidate_name": "David Kim",
-    "expected_score": 55.0,
-    "years_experience": 1,
+    "candidate_name": "Justin Schulberg",
+    "expected_score": 68.0,
+    "years_experience": 3,
     "education": {
-        "level": "Bachelors",
-        "field": "Information Systems",
+        "level": "Masters",
+        "field": "Data Analytics",
         "relevance": "partial"
     },
     "expected_skills": {
         "required_skills": [
             "Python",
+            "R",
             "SQL",
-            "Data Analysis"
+            "Machine Learning",
+            "Data Visualization"
         ],
         "preferred_skills": [
-            "Pandas",
-            "Basic ML",
-            "Tableau"
+            "NLP",
+            "Docker",
+            "Power BI",
+            "Tableau",
+            "GPT/LLMs"
         ]
     },
     "technical_competencies": {
-        "programming": ["Python", "SQL"],
-        "data_analysis": ["Excel", "Pandas"],
-        "visualization": ["Tableau"]
+        "ml_tools": ["NLTK", "spaCy", "scikit-learn"],
+        "data_tools": ["Python", "R", "SQL", "Power BI"],
+        "cloud": ["Azure"],
+        "nlp": ["GPT", "Embedding Models", "Transformers"]
     },
     "domain_expertise": [
-        "Data Analysis",
-        "Business Intelligence",
-        "Basic Python Programming"
+        "NLP",
+        "Entity Resolution",
+        "Semantic Search",
+        "Machine Learning",
+        "Data Visualization"
     ],
     "impact_metrics": [
-        "Created automated reports",
-        "Built data pipelines",
-        "Improved data quality by 25%"
+        "Enhanced information retrieval accuracy",
+        "Reduced staff review time for 63M data points",
+        "Saved 20 hours/week through automation",
+        "Built Executive-level dashboards"
     ],
-    "notes": "Strong in data analysis but limited ML experience",
+    "notes": "Recent transition to DS with good theoretical foundation. Strong in NLP but needs broader DS experience.",
     "expected_scores": {
-        "skills_match": 55,
-        "experience_match": 45,
-        "role_relevance": 50
+        "skills_match": 65,
+        "experience_match": 60,
+        "role_relevance": 70,
+        "technical_score": {
+            "skills": 0.65,
+            "platform_specific_experience": 0.60,
+            "experience": 0.60,
+            "role_relevance": 0.70,
+            "us_market_fit": 0.75
+        }
     }
 }

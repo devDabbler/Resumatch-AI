@@ -1,43 +1,58 @@
 {
-    "candidate_name": "Rachel Martinez",
-    "expected_score": 58.0,
+    "candidate_name": "Divisha Jain",
+    "expected_score": 65.0,
     "years_experience": 3,
     "education": {
-        "level": "Bachelors",
-        "field": "Physics",
+        "level": "Masters",
+        "field": "Business Analytics",
         "relevance": "partial"
     },
     "expected_skills": {
         "required_skills": [
             "Python",
-            "MATLAB",
-            "Data Analysis"
+            "SQL",
+            "Data Visualization",
+            "Statistical Analysis"
         ],
         "preferred_skills": [
+            "Pandas",
             "NumPy",
-            "SciPy",
-            "Basic ML"
+            "Scikit-learn",
+            "PySpark",
+            "Tableau",
+            "Power BI"
         ]
     },
     "technical_competencies": {
-        "scientific_computing": ["MATLAB", "Python"],
-        "data_analysis": ["NumPy", "SciPy"],
-        "visualization": ["Matplotlib"]
+        "ml_tools": ["Scikit Learn", "PySpark"],
+        "data_tools": ["Python", "R", "SQL", "Tableau", "Power BI"],
+        "big_data": ["Snowflake", "Databricks", "Hive"],
+        "analytics": ["Marketing Analytics", "A/B Testing"]
     },
     "domain_expertise": [
-        "Scientific Computing",
-        "Data Analysis",
-        "Physics Simulations"
+        "Marketing Analytics",
+        "Predictive Analytics",
+        "Data Mining",
+        "Statistical Modeling",
+        "Machine Learning"
     ],
     "impact_metrics": [
-        "Developed physics simulations",
-        "Analyzed large datasets",
-        "Published research paper"
+        "25% increase in customer retention",
+        "$2M in annual revenue generation",
+        "5% increase in production capacity",
+        "20% reduction in turnaround time"
     ],
-    "notes": "Strong scientific background but needs ML experience",
+    "notes": "Strong in business analytics with growing ML expertise. Good foundation but needs more advanced DS experience.",
     "expected_scores": {
-        "skills_match": 58,
-        "experience_match": 52,
-        "role_relevance": 55
+        "skills_match": 65,
+        "experience_match": 60,
+        "role_relevance": 70,
+        "technical_score": {
+            "skills": 0.65,
+            "platform_specific_experience": 0.60,
+            "experience": 0.60,
+            "role_relevance": 0.70,
+            "us_market_fit": 0.75
+        }
     }
 }

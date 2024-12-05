@@ -1,0 +1,65 @@
+{
+    "candidate_name": "Bhautik Khunt",
+    "expected_score": 68.0,
+    "years_experience": 3,
+    "education": {
+        "level": "Bachelors",
+        "field": "Information Technology",
+        "relevance": "partial"
+    },
+    "expected_skills": {
+        "required_skills": [
+            "JavaScript",
+            "Java",
+            "Git",
+            "SQL",
+            "CI/CD"
+        ],
+        "preferred_skills": [
+            "Spring Boot",
+            "REST APIs",
+            "Jenkins",
+            "Maven",
+            "Agile"
+        ]
+    },
+    "technical_competencies": {
+        "frontend": {
+            "languages": ["HTML5", "CSS3", "JavaScript"],
+            "frameworks": ["JSP", "Angular", "jQuery"]
+        },
+        "backend": {
+            "languages": ["Java", "SQL"],
+            "frameworks": ["Spring", "Hibernate", "EJB"],
+            "databases": ["Oracle", "MySQL", "MongoDB", "SQL Server"]
+        },
+        "devops": {
+            "tools": ["Jenkins", "Maven", "AWS (EC2)"],
+            "practices": ["CI/CD", "Agile/Scrum"]
+        }
+    },
+    "domain_expertise": [
+        "Java/J2EE Development",
+        "Enterprise Applications",
+        "Spring Framework",
+        "Database Design"
+    ],
+    "impact_metrics": [
+        "Implemented microservices architecture",
+        "Created CI/CD pipelines",
+        "Mentored junior developers",
+        "Developed RESTful APIs"
+    ],
+    "notes": "Strong Java backend skills but limited modern frontend experience. Missing several key technologies like React and Python. Good enterprise development background but narrow technical scope.",
+    "expected_scores": {
+        "skills_match": 65,
+        "experience_match": 60,
+        "role_relevance": 70,
+        "technical_score": {
+            "frontend": 0.60,
+            "backend": 0.75,
+            "devops": 0.65,
+            "core_cs": 0.70
+        }
+    }
+}

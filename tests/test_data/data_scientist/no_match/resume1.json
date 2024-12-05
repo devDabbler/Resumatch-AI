@@ -1,43 +1,51 @@
 {
-    "candidate_name": "John Smith",
-    "expected_score": 35.0,
-    "years_experience": 5,
+    "candidate_name": "Corrie Stoddard",
+    "expected_score": 25.0,
+    "years_experience": 4,
     "education": {
         "level": "Bachelors",
-        "field": "Marketing",
+        "field": "Cognitive Science",
         "relevance": "minimal"
     },
     "expected_skills": {
         "required_skills": [
-            "Excel",
-            "Basic Python",
-            "Marketing Analytics"
+            "Basic Data Analysis"
         ],
         "preferred_skills": [
-            "Google Analytics",
-            "Social Media Analytics",
-            "Basic SQL"
+            "TypeScript",
+            "React",
+            "PostgreSQL"
         ]
     },
     "technical_competencies": {
-        "analytics": ["Google Analytics", "Excel"],
-        "programming": ["Basic Python"],
-        "marketing": ["Digital Marketing", "SEO"]
+        "frontend": ["React", "TypeScript", "SCSS"],
+        "backend": ["PostgreSQL", "DynamoDB", "C#", ".NET"],
+        "testing": ["Jest", "Cypress"],
+        "cloud": ["AWS"]
     },
     "domain_expertise": [
-        "Digital Marketing",
-        "Content Strategy",
-        "Basic Data Analysis"
+        "Frontend Development",
+        "UI Engineering",
+        "Software Development",
+        "Web Applications"
     ],
     "impact_metrics": [
-        "Increased web traffic by 200%",
-        "Managed $1M marketing budget",
-        "Led marketing campaigns"
+        "Developed React applications",
+        "Created visual interfaces",
+        "Built UI component libraries",
+        "Increased user retention metrics"
     ],
-    "notes": "Strong marketing background but minimal data science experience",
+    "notes": "Pure software engineer with frontend focus. No relevant data science experience.",
     "expected_scores": {
-        "skills_match": 35,
-        "experience_match": 30,
-        "role_relevance": 25
+        "skills_match": 25,
+        "experience_match": 20,
+        "role_relevance": 15,
+        "technical_score": {
+            "skills": 0.25,
+            "platform_specific_experience": 0.20,
+            "experience": 0.20,
+            "role_relevance": 0.15,
+            "us_market_fit": 0.30
+        }
     }
 }

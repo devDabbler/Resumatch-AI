@@ -1,46 +1,62 @@
 {
-    "candidate_name": "Emily Rodriguez",
-    "expected_score": 72.0,
-    "years_experience": 4,
+    "candidate_name": "Chenfei Song",
+    "expected_score": 80.0,
+    "years_experience": 3,
     "education": {
         "level": "Masters",
-        "field": "Applied Mathematics",
+        "field": "Operations Research",
         "relevance": "partial"
     },
     "expected_skills": {
         "required_skills": [
             "Python",
-            "R",
+            "Machine Learning",
             "Statistics",
-            "Data Analysis"
+            "Data Visualization",
+            "Git"
         ],
         "preferred_skills": [
-            "Scikit-learn",
             "TensorFlow",
-            "SQL",
-            "Tableau"
+            "PyTorch",
+            "Scikit-learn",
+            "Pandas",
+            "NumPy",
+            "MLflow",
+            "Databricks",
+            "AWS"
         ]
     },
     "technical_competencies": {
-        "ml_frameworks": ["Scikit-learn", "Basic TensorFlow"],
-        "data_analysis": ["R", "Python", "SQL"],
-        "visualization": ["Tableau", "Matplotlib"]
+        "core_ml": ["TensorFlow", "PyTorch", "scikit-learn"],
+        "math": ["Statistics", "Operations Research"],
+        "data_tools": ["Python", "Pandas", "NumPy", "Tableau"],
+        "devops": ["Git", "AWS", "MLflow", "Airflow"]
     },
     "domain_expertise": [
-        "Statistical Modeling",
-        "A/B Testing",
-        "Data Analysis",
-        "Basic Machine Learning"
+        "Time Series Analysis",
+        "Classification Models",
+        "Regression Analysis",
+        "Anomaly Detection",
+        "NLP",
+        "LLMs"
     ],
     "impact_metrics": [
-        "Reduced model training time by 30%",
-        "Implemented A/B testing framework",
-        "Developed statistical models for forecasting"
+        "Protected portfolio against 8% loss (4M USD)",
+        "67% accuracy in predicting market spikes",
+        "Improved AUC score by 8%",
+        "50% reduction in vendor workload"
     ],
-    "notes": "Strong statistical background with growing ML expertise",
+    "notes": "Strong technical foundation with focus on financial applications. Good balance of ML theory and practical implementation.",
     "expected_scores": {
-        "skills_match": 70,
+        "skills_match": 82,
         "experience_match": 75,
-        "role_relevance": 70
+        "role_relevance": 80,
+        "technical_score": {
+            "skills": 0.82,
+            "platform_specific_experience": 0.78,
+            "experience": 0.75,
+            "role_relevance": 0.80,
+            "us_market_fit": 0.85
+        }
     }
 }

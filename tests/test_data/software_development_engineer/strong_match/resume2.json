@@ -1,0 +1,73 @@
+{
+    "candidate_name": "Jubin Soni",
+    "expected_score": 92.0,
+    "years_experience": 8,
+    "education": {
+        "level": "Masters",
+        "field": "Computer Science",
+        "relevance": "direct"
+    },
+    "expected_skills": {
+        "required_skills": [
+            "React",
+            "JavaScript",
+            "Python",
+            "Git",
+            "SQL",
+            "NoSQL",
+            "Data Structures",
+            "Algorithms",
+            "CI/CD"
+        ],
+        "preferred_skills": [
+            "Django",
+            "Node.js",
+            "GraphQL",
+            "REST APIs",
+            "AWS",
+            "CircleCI",
+            "Docker"
+        ]
+    },
+    "technical_competencies": {
+        "frontend": {
+            "frameworks": ["React", "Bootstrap"],
+            "languages": ["JavaScript", "HTML", "CSS"],
+            "tools": ["GraphQL"]
+        },
+        "backend": {
+            "languages": ["Python", "Java", "Kotlin"],
+            "frameworks": ["Django", "Node.js", "Flask"],
+            "databases": ["PostgreSQL", "Redis", "MongoDB"]
+        },
+        "devops": {
+            "tools": ["Docker", "Git", "CircleCI", "AWS"],
+            "platforms": ["EC2", "Lambda", "S3", "RDS", "CloudWatch"]
+        }
+    },
+    "domain_expertise": [
+        "Scalable Web Applications",
+        "API Development",
+        "Performance Optimization",
+        "Distributed Systems",
+        "Cloud Architecture"
+    ],
+    "impact_metrics": [
+        "Built platform for 10M users/day",
+        "Processed 10K API calls/day",
+        "Reduced incident reaction time significantly",
+        "Generated $1-2M incremental revenue"
+    ],
+    "notes": "Strong full-stack engineer with extensive experience in high-scale applications. Excellent balance of frontend, backend, and DevOps skills.",
+    "expected_scores": {
+        "skills_match": 92,
+        "experience_match": 94,
+        "role_relevance": 90,
+        "technical_score": {
+            "frontend": 0.90,
+            "backend": 0.95,
+            "devops": 0.92,
+            "core_cs": 0.90
+        }
+    }
+}

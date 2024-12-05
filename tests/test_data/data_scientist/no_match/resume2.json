@@ -1,43 +1,53 @@
 {
-    "candidate_name": "Alex Thompson",
-    "expected_score": 32.0,
-    "years_experience": 6,
+    "candidate_name": "Polina Litovchenko",
+    "expected_score": 28.0,
+    "years_experience": 4,
     "education": {
         "level": "Bachelors",
-        "field": "Business Administration",
-        "relevance": "minimal"
+        "field": "Mathematics",
+        "relevance": "partial"
     },
     "expected_skills": {
         "required_skills": [
-            "Excel",
-            "PowerBI",
-            "Basic SQL"
+            "Python",
+            "SQL"
         ],
         "preferred_skills": [
-            "Tableau",
-            "Basic Python",
-            "Business Analytics"
+            "AWS",
+            "Azure",
+            "Git",
+            "Jenkins"
         ]
     },
     "technical_competencies": {
-        "business_tools": ["Excel", "PowerBI"],
-        "analytics": ["Basic SQL", "Basic Python"],
-        "visualization": ["Tableau"]
+        "programming": ["Java", "JavaScript", "Python", "TypeScript"],
+        "frameworks": ["Spring Boot", "Vue.js", "Node.js"],
+        "cloud": ["AWS", "Azure"],
+        "devops": ["Git", "Jenkins", "CI/CD"]
     },
     "domain_expertise": [
-        "Business Analytics",
-        "Financial Analysis",
-        "Project Management"
+        "Software Engineering",
+        "Full-stack Development",
+        "API Development",
+        "Database Design"
     ],
     "impact_metrics": [
-        "Led business analytics team",
-        "Reduced operational costs by 15%",
-        "Implemented PowerBI dashboards"
+        "70% reduction in manual data entry",
+        "40% improvement in user satisfaction",
+        "Optimized application performance",
+        "Led backend development projects"
     ],
-    "notes": "Business analyst with minimal data science experience",
+    "notes": "Senior software engineer with strong technical skills but no data science expertise.",
     "expected_scores": {
-        "skills_match": 32,
-        "experience_match": 35,
-        "role_relevance": 30
+        "skills_match": 28,
+        "experience_match": 25,
+        "role_relevance": 20,
+        "technical_score": {
+            "skills": 0.28,
+            "platform_specific_experience": 0.25,
+            "experience": 0.25,
+            "role_relevance": 0.20,
+            "us_market_fit": 0.35
+        }
     }
 }

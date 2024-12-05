@@ -1,0 +1,69 @@
+{
+    "candidate_name": "Artem Nyzhnyk",
+    "expected_score": 82.0,
+    "years_experience": 20,
+    "education": {
+        "level": "Bachelors",
+        "field": "Computer Science",
+        "relevance": "direct"
+    },
+    "expected_skills": {
+        "required_skills": [
+            "JavaScript",
+            "Python",
+            "Git",
+            "React",
+            "SQL",
+            "Data Structures",
+            "Algorithms",
+            "CI/CD"
+        ],
+        "preferred_skills": [
+            "TypeScript",
+            "Angular",
+            "Node.js",
+            "Docker",
+            "Jenkins",
+            "AWS"
+        ]
+    },
+    "technical_competencies": {
+        "frontend": {
+            "languages": ["JavaScript [E]", "TypeScript [E]"],
+            "frameworks": ["Angular [E]", "React [I]"]
+        },
+        "backend": {
+            "languages": ["Node [E]", "Java [I]", "Python [N]"],
+            "databases": ["Spanner", "PostgreSQL", "MySQL", "MongoDB"]
+        },
+        "devops": {
+            "tools": ["Jenkins", "Docker", "GCP", "AWS"],
+            "practices": ["CI/CD", "Microservices"]
+        }
+    },
+    "domain_expertise": [
+        "Solution Architecture",
+        "Technical Leadership",
+        "Cloud Solutions",
+        "Distributed Systems",
+        "Performance Optimization"
+    ],
+    "impact_metrics": [
+        "Led teams of 5-11 engineers",
+        "75% success rate in mentoring",
+        "Improved CI pipeline efficiency",
+        "Optimized application performance"
+    ],
+    "notes": "Strong technical leadership and architectural skills, but some key technologies (Python, DevOps tools) marked as novice/intermediate level. Good foundation but needs updating in some modern stack components.",
+    "expected_scores": {
+        "skills_match": 80,
+        "experience_match": 85,
+        "role_relevance": 82,
+        "technical_score": {
+            "frontend": 0.85,
+            "backend": 0.75,
+            "devops": 0.80,
+            "core_cs": 0.90
+        }
+    }
+}

@@ -1,6 +1,6 @@
 {
     "candidate_name": "Ayush Oturkar",
-    "expected_score": 95.0,
+    "expected_score": 93.5,
     "years_experience": 5,
     "education": {
         "level": "Masters",
@@ -11,10 +11,10 @@
         "required_skills": [
             "Python",
             "Machine Learning",
-            "Deep Learning",
             "Statistics",
             "Data Visualization",
-            "Big Data"
+            "Git",
+            "Linear Algebra"
         ],
         "preferred_skills": [
             "TensorFlow",
@@ -22,21 +22,25 @@
             "Scikit-learn",
             "Pandas",
             "NumPy",
+            "Deep Learning",
             "MLflow",
-            "Docker",
-            "Databricks"
+            "Databricks",
+            "MapReduce",
+            "Streaming Technology"
         ]
     },
     "technical_competencies": {
-        "ml_frameworks": ["TensorFlow", "PyTorch", "Scikit-learn"],
-        "big_data": ["Spark", "PySpark"],
-        "cloud_platforms": ["AWS", "Azure"]
+        "core_ml": ["TensorFlow", "PyTorch", "Deep Learning"],
+        "math": ["Statistics", "Linear Algebra"],
+        "data_tools": ["Python", "Pandas", "NumPy", "Data Visualization"],
+        "devops": ["Git", "MLflow", "Databricks"]
     },
     "domain_expertise": [
         "Predictive Analytics",
-        "Natural Language Processing",
-        "MLOps",
-        "Time Series Analysis"
+        "Machine Learning Operations",
+        "Time Series Analysis",
+        "Statistical Modeling",
+        "Deep Learning"
     ],
     "impact_metrics": [
         "$1M EBIDTA savings",
@@ -44,10 +48,16 @@
         "2.5% increase in top-line sales",
         "99% reduction in manual efforts"
     ],
-    "notes": "Strong candidate with balanced experience across ML, deep learning, and MLOps. Proven track record of business impact across multiple industries. Top 1% Kaggle Master.",
     "expected_scores": {
-        "skills_match": 85,
-        "experience_match": 90,
-        "role_relevance": 85
+        "skills_match": 92,
+        "experience_match": 95,
+        "role_relevance": 93,
+        "technical_score": {
+            "skills": 0.95,
+            "platform_specific_experience": 0.90,
+            "experience": 0.95,
+            "role_relevance": 0.92,
+            "us_market_fit": 0.95
+        }
     }
 }

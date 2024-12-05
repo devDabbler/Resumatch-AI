@@ -1,0 +1,64 @@
+{
+    "candidate_name": "Joel James Darling",
+    "expected_score": 45.0,
+    "years_experience": 3,
+    "education": {
+        "level": "Incomplete BS",
+        "field": "Software Engineering",
+        "relevance": "partial"
+    },
+    "expected_skills": {
+        "required_skills": [
+            "JavaScript",
+            "Node.js",
+            "Java",
+            "Python",
+            "SQL"
+        ],
+        "preferred_skills": [
+            "TypeScript",
+            "Angular",
+            "Azure",
+            "MongoDB"
+        ]
+    },
+    "technical_competencies": {
+        "frontend": {
+            "languages": ["HTML", "CSS", "JavaScript"],
+            "frameworks": ["AngularJS"]
+        },
+        "backend": {
+            "languages": ["Java", "Node.js", "PHP", "C#"],
+            "frameworks": ["Spring"],
+            "databases": ["MongoDB", "SQL"]
+        },
+        "cloud": {
+            "platforms": ["Azure"],
+            "experience": "limited"
+        }
+    },
+    "domain_expertise": [
+        "IoT Development",
+        "Test Automation",
+        "CRM Development",
+        "Database Design"
+    ],
+    "impact_metrics": [
+        "200% increase in test creation speed",
+        "430% improvement in workflow",
+        "2-month product delivery",
+        "<0.5% error rate"
+    ],
+    "notes": "Incomplete education, scattered technology experience without depth, missing many modern frameworks and tools. Experience too limited and unfocused for role requirements.",
+    "expected_scores": {
+        "skills_match": 45,
+        "experience_match": 35,
+        "role_relevance": 40,
+        "technical_score": {
+            "frontend": 0.40,
+            "backend": 0.45,
+            "devops": 0.30,
+            "core_cs": 0.40
+        }
+    }
+}

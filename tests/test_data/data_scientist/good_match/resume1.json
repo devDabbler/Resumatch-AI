@@ -1,45 +1,59 @@
 {
-    "candidate_name": "Michael Chen",
-    "expected_score": 75.0,
-    "years_experience": 3,
+    "candidate_name": "Dongming Jin",
+    "expected_score": 82.5,
+    "years_experience": 4,
     "education": {
-        "level": "Masters",
-        "field": "Data Analytics",
-        "relevance": "direct"
+        "level": "PhD",
+        "field": "Physics",
+        "relevance": "partial"
     },
     "expected_skills": {
         "required_skills": [
             "Python",
             "Machine Learning",
             "Statistics",
-            "Data Visualization"
+            "Data Visualization",
+            "Git"
         ],
         "preferred_skills": [
-            "Scikit-learn",
-            "Pandas",
-            "NumPy",
-            "SQL"
+            "PyTorch",
+            "Deep Learning",
+            "AWS",
+            "SQL",
+            "LLMs",
+            "Redis"
         ]
     },
     "technical_competencies": {
-        "ml_frameworks": ["Scikit-learn"],
-        "big_data": ["SQL", "Pandas"],
-        "cloud_platforms": ["AWS"]
+        "core_ml": ["PyTorch", "Deep Learning", "LLM tuning"],
+        "math": ["Physics", "Statistical Analysis"],
+        "data_tools": ["Python", "pandas", "sklearn"],
+        "devops": ["Git", "AWS", "Linux"]
     },
     "domain_expertise": [
-        "Data Analytics",
-        "Business Intelligence",
-        "Statistical Analysis"
+        "LLM Engineering",
+        "Product Analytics",
+        "Pricing Strategy",
+        "Fraud Detection",
+        "Recommendation Systems"
     ],
     "impact_metrics": [
-        "Improved model accuracy by 15%",
-        "Reduced reporting time by 40%",
-        "Automated ETL processes"
+        "99.9% uptime between product iterations",
+        "8% revenue increase through A/B testing",
+        "6x performance improvement in model updates",
+        "$200M value generation for partners"
     ],
-    "notes": "Good foundational skills with growing expertise in ML",
+    "notes": "Strong technical background with good product focus. Physics PhD provides strong analytical foundation.",
     "expected_scores": {
-        "skills_match": 75,
-        "experience_match": 70,
-        "role_relevance": 75
+        "skills_match": 85,
+        "experience_match": 80,
+        "role_relevance": 82,
+        "technical_score": {
+            "skills": 0.85,
+            "platform_specific_experience": 0.80,
+            "experience": 0.80,
+            "role_relevance": 0.82,
+            "us_market_fit": 0.85
+        }
     }
 }

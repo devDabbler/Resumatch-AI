@@ -1,0 +1,69 @@
+{
+    "candidate_name": "Nicholas Cushman",
+    "expected_score": 78.0,
+    "years_experience": 3,
+    "education": {
+        "level": "Bachelors",
+        "field": "General",
+        "relevance": "partial"
+    },
+    "expected_skills": {
+        "required_skills": [
+            "JavaScript",
+            "Python",
+            "React",
+            "Git",
+            "SQL",
+            "CI/CD",
+            "Data Structures"
+        ],
+        "preferred_skills": [
+            "TypeScript",
+            "Node.js",
+            "Vue",
+            "Docker",
+            "Express",
+            "AWS"
+        ]
+    },
+    "technical_competencies": {
+        "frontend": {
+            "frameworks": ["React", "Next.js", "Vue"],
+            "languages": ["TypeScript", "JavaScript", "HTML5", "CSS"]
+        },
+        "backend": {
+            "frameworks": ["Node", "Express", "Django"],
+            "languages": ["Python", "Java"],
+            "databases": ["MongoDB", "PostgreSQL"]
+        },
+        "devops": {
+            "cloud": ["AWS (DynamoDB, EC2, Lambda, RDS, SNS, SQS, S3)"],
+            "tools": ["Docker", "Github Actions"]
+        }
+    },
+    "domain_expertise": [
+        "Web Development",
+        "Frontend Architecture",
+        "AWS Serverless",
+        "Testing Practices",
+        "Performance Optimization"
+    ],
+    "impact_metrics": [
+        "90% viewport utilization improvement",
+        "20% runtime performance improvement",
+        "5% DB entry reduction",
+        "100% TypeScript coverage"
+    ],
+    "notes": "Strong modern tech stack knowledge but less experience than required. Good testing practices and performance optimization skills.",
+    "expected_scores": {
+        "skills_match": 82,
+        "experience_match": 70,
+        "role_relevance": 80,
+        "technical_score": {
+            "frontend": 0.85,
+            "backend": 0.75,
+            "devops": 0.80,
+            "core_cs": 0.75
+        }
+    }
+}

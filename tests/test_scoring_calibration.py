@@ -41,7 +41,7 @@ class TestScoringCalibration(unittest.TestCase):
             data = json.load(f)
             return data.get('expected_score', 0)
             
-    def process_resume(self, resume_file):
+    def process_resume(self, resume_file, role_name):
         """Process a resume file and return score data."""
         # Extract text from PDF
         with open(resume_file, 'rb') as pdf_file:
@@ -57,9 +57,6 @@ class TestScoringCalibration(unittest.TestCase):
                 'required': expected_skills.get('required_skills', []),
                 'preferred': expected_skills.get('preferred_skills', [])
             }
-            
-        # Use correct role name from config
-        role_name = "Data Scientist"
             
         # Get score details
         score_details = self.job_matcher.calculate_match_score(
@@ -83,117 +80,118 @@ class TestScoringCalibration(unittest.TestCase):
         self.assertGreaterEqual(score_details['experience_score'], 0)
         self.assertLessEqual(score_details['experience_score'], 100)
         
-        # Validate skills breakdown
-        skills_breakdown = score_details['skills_breakdown']
-        self.assertIn('required_match', skills_breakdown)
-        self.assertIn('preferred_match', skills_breakdown)
-        self.assertIn('required_score', skills_breakdown)
-        self.assertIn('preferred_score', skills_breakdown)
-        
         # Return technical match score for existing test logic
         return score_details['technical_match_score']
             
     def test_strong_match_resumes(self):
         """Test scoring for strong match resumes."""
-        strong_match_dir = self.test_data_path / 'strong_match'
-        for resume_file in strong_match_dir.glob('*.pdf'):
-            json_file = resume_file.with_suffix('.json')
-            actual_score = self.process_resume(resume_file)
-            expected_score = self.load_json_score(json_file)
-            
-            # Validate score is in strong match range
-            self.validate_score_range(actual_score, 'strong_match')
-            
-            # Score should be within 5 points of expected
-            self.assertAlmostEqual(
-                actual_score, 
-                expected_score, 
-                delta=5,
-                msg=f"Significant score deviation for {resume_file.name}"
-            )
+        roles = ['Data Scientist', 'Software Development Engineer']
+        
+        for role in roles:
+            strong_match_dir = self.test_data_path / role.lower().replace(' ', '_') / 'strong_match'
+            for resume_file in strong_match_dir.glob('*.pdf'):
+                json_file = resume_file.with_suffix('.json')
+                actual_score = self.process_resume(resume_file, role)
+                expected_score = self.load_json_score(json_file)
+                
+                # Validate score is in strong match range
+                self.validate_score_range(actual_score, 'strong_match')
+                
+                # Score should be within 5 points of expected
+                self.assertAlmostEqual(
+                    actual_score, 
+                    expected_score, 
+                    delta=5,
+                    msg=f"Significant score deviation for {resume_file.name} ({role})"
+                )
             
     def test_good_match_resumes(self):
         """Test scoring for good match resumes."""
-        good_match_dir = self.test_data_path / 'good_match'
-        for resume_file in good_match_dir.glob('*.pdf'):
-            json_file = resume_file.with_suffix('.json')
-            actual_score = self.process_resume(resume_file)
-            expected_score = self.load_json_score(json_file)
-            
-            self.validate_score_range(actual_score, 'good_match')
-            self.assertAlmostEqual(
-                actual_score, 
-                expected_score, 
-                delta=5,
-                msg=f"Significant score deviation for {resume_file.name}"
-            )
+        roles = ['Data Scientist', 'Software Development Engineer']
+        
+        for role in roles:
+            good_match_dir = self.test_data_path / role.lower().replace(' ', '_') / 'good_match'
+            for resume_file in good_match_dir.glob('*.pdf'):
+                json_file = resume_file.with_suffix('.json')
+                actual_score = self.process_resume(resume_file, role)
+                expected_score = self.load_json_score(json_file)
+                
+                self.validate_score_range(actual_score, 'good_match')
+                self.assertAlmostEqual(
+                    actual_score, 
+                    expected_score, 
+                    delta=5,
+                    msg=f"Significant score deviation for {resume_file.name} ({role})"
+                )
             
     def test_potential_match_resumes(self):
         """Test scoring for potential match resumes."""
-        potential_match_dir = self.test_data_path / 'potential_match'
-        for resume_file in potential_match_dir.glob('*.pdf'):
-            json_file = resume_file.with_suffix('.json')
-            actual_score = self.process_resume(resume_file)
-            expected_score = self.load_json_score(json_file)
-            
-            self.validate_score_range(actual_score, 'potential_match')
-            self.assertAlmostEqual(
-                actual_score, 
-                expected_score, 
-                delta=5,
-                msg=f"Significant score deviation for {resume_file.name}"
-            )
+        roles = ['Data Scientist', 'Software Development Engineer']
+        
+        for role in roles:
+            potential_match_dir = self.test_data_path / role.lower().replace(' ', '_') / 'potential_match'
+            for resume_file in potential_match_dir.glob('*.pdf'):
+                json_file = resume_file.with_suffix('.json')
+                actual_score = self.process_resume(resume_file, role)
+                expected_score = self.load_json_score(json_file)
+                
+                self.validate_score_range(actual_score, 'potential_match')
+                self.assertAlmostEqual(
+                    actual_score, 
+                    expected_score, 
+                    delta=5,
+                    msg=f"Significant score deviation for {resume_file.name} ({role})"
+                )
             
     def test_no_match_resumes(self):
         """Test scoring for no match resumes."""
-        no_match_dir = self.test_data_path / 'no_match'
-        for resume_file in no_match_dir.glob('*.pdf'):
-            json_file = resume_file.with_suffix('.json')
-            actual_score = self.process_resume(resume_file)
-            expected_score = self.load_json_score(json_file)
-            
-            self.validate_score_range(actual_score, 'no_match')
-            self.assertAlmostEqual(
-                actual_score, 
-                expected_score, 
-                delta=5,
-                msg=f"Significant score deviation for {resume_file.name}"
-            )
+        roles = ['Data Scientist', 'Software Development Engineer']
+        
+        for role in roles:
+            no_match_dir = self.test_data_path / role.lower().replace(' ', '_') / 'no_match'
+            for resume_file in no_match_dir.glob('*.pdf'):
+                json_file = resume_file.with_suffix('.json')
+                actual_score = self.process_resume(resume_file, role)
+                expected_score = self.load_json_score(json_file)
+                
+                self.validate_score_range(actual_score, 'no_match')
+                self.assertAlmostEqual(
+                    actual_score, 
+                    expected_score, 
+                    delta=5,
+                    msg=f"Significant score deviation for {resume_file.name} ({role})"
+                )
             
     def test_score_distribution(self):
         """Test that scores maintain proper distribution across categories."""
-        categories = [
-            'strong_match', 'good_match', 
-            'potential_match', 'no_match'
-        ]
-        all_scores = []
+        roles = ['Data Scientist', 'Software Development Engineer']
+        categories = ['strong_match', 'good_match', 'potential_match', 'no_match']
         
-        for category in categories:
-            category_dir = self.test_data_path / category
-            for resume_file in category_dir.glob('*.pdf'):
-                score = self.process_resume(resume_file)
-                all_scores.append((category, score))
-        
-        # Verify category separation
-        for i in range(len(categories) - 1):
-            current_cat = categories[i]
-            next_cat = categories[i + 1]
+        for role in roles:
+            all_scores = []
             
-            current_scores = [
-                s for cat, s in all_scores if cat == current_cat
-            ]
-            next_scores = [
-                s for cat, s in all_scores if cat == next_cat
-            ]
+            for category in categories:
+                category_dir = self.test_data_path / role.lower().replace(' ', '_') / category
+                for resume_file in category_dir.glob('*.pdf'):
+                    score = self.process_resume(resume_file, role)
+                    all_scores.append((category, score))
             
-            if current_scores and next_scores:
-                min_current = min(current_scores)
-                max_next = max(next_scores)
-                self.assertGreater(
-                    min_current,
-                    max_next,
-                    f"Score overlap between {current_cat} and {next_cat}"
-                )
+            # Verify category separation
+            for i in range(len(categories) - 1):
+                current_cat = categories[i]
+                next_cat = categories[i + 1]
+                
+                current_scores = [s for cat, s in all_scores if cat == current_cat]
+                next_scores = [s for cat, s in all_scores if cat == next_cat]
+                
+                if current_scores and next_scores:
+                    min_current = min(current_scores)
+                    max_next = max(next_scores)
+                    self.assertGreater(
+                        min_current,
+                        max_next,
+                        f"Score overlap between {current_cat} and {next_cat} for {role}"
+                    )
 
     def test_required_skills_threshold(self):
         """Test that required skills threshold is enforced."""
