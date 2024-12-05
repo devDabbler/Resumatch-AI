@@ -229,26 +229,24 @@ class LLMAnalyzer:
             logger.error(f"Problematic text: {text[:500]}")
             raise ValueError(f"Failed to extract valid JSON: {str(e)}")
 
-    def _mixtral_technical_analysis(self, resume_text, role_name, matched_skills, extracted_experience, technical_score):
+    def _mixtral_technical_analysis(self, resume_text, role_name, matched_skills, 
+                              extracted_experience, technical_score):
         """Technical skills analysis using Mixtral"""
         try:
-            # Load job roles configuration
             with open('config/jobs.yaml', 'r') as f:
                 config = yaml.safe_load(f)
-                
+            
             role_config = config['job_roles'].get(role_name)
             if not role_config:
                 raise ValueError(f"Role {role_name} not found in configuration")
             
-            # Safely handle matched_skills dictionary with default empty lists
             matched_skills = matched_skills if isinstance(matched_skills, dict) else {}
             matched_required = list(matched_skills.get('required', []))
             matched_preferred = list(matched_skills.get('preferred', []))
             
-            # Format experience matches
-            experience_summary = "\n".join(extracted_experience) if extracted_experience else "No experience matches found"
+            experience_summary = ("\n".join(extracted_experience) if extracted_experience 
+                                else "No experience matches found")
             
-            # Determine recommendation based on technical score
             max_score = role_config.get('scoring_constraints', {}).get('max_score', 100)
             if technical_score >= int(max_score * 0.85):
                 recommendation = "STRONG_MATCH"
@@ -262,6 +260,8 @@ class LLMAnalyzer:
             system_prompt = (
                 "You are an expert technical recruiter analyzing resumes. "
                 "Your task is to provide a detailed technical analysis in JSON format. "
+                "Important: You MUST include all matched skills from the matched_required and matched_preferred lists in the skills_assessment section. "
+                "For each matched skill, you must include a detailed proficiency assessment and context.\n"
                 "Rules:\n"
                 "1. ONLY return a valid JSON object\n"
                 "2. Include ALL required fields even if empty\n"
@@ -272,94 +272,68 @@ class LLMAnalyzer:
                 "7. Provide detailed key findings\n"
                 "8. List specific technical gaps\n"
                 "9. Include detailed skills assessment\n"
-                "10. Do not include any text outside the JSON object"
+                "10. Consider package manager experience as implementation experience\n"
+                "11. Do not include any text outside the JSON object"
             )
             
-            user_prompt = f"""Analyze technical qualifications for {role_name} and return a detailed JSON object with this exact structure:
+            user_prompt = f"""Analyze technical qualifications for {role_name}. REQUIRED: Include detailed assessments for all skills found:
+            Required Skills Found: {', '.join(matched_required)}
+            Preferred Skills Found: {', '.join(matched_preferred)}
 
-{{
-    "technical_match_score": {technical_score},
-    "skills_assessment": [
-        {{
-            "skill": "Python",
-            "proficiency": "Expert",
-            "years": 5,
-            "context": "Used Python for data analysis and machine learning"
-        }},
-        {{
-            "skill": "Machine Learning",
-            "proficiency": "Advanced",
-            "years": 3,
-            "context": "Implemented various ML models"
-        }}
-    ],
-    "technical_gaps": [
-        "Limited experience with specific technology X",
-        "Missing certification Y"
-    ],
-    "interview_questions": [
-        "Describe your experience with technology X",
-        "How have you implemented Y in previous projects?",
-        "What challenges did you face with Z?"
-    ],
-    "recommendation": "{recommendation}",
-    "key_findings": [
-        "Strong background in A",
-        "Demonstrated expertise in B",
-        "Notable achievements in C"
-    ],
-    "concerns": [
-        "Gap in critical skill X",
-        "Limited experience with Y"
-    ]
-}}
+            Package manager (pypi, npm) experience indicates skilled technical usage.
 
-Resume Text: {resume_text}
-Required Skills: {', '.join(role_config['required_skills'])}
-Preferred Skills: {', '.join(role_config['preferred_skills'])}
-Min Experience: {role_config['min_years_experience']}
-Matched Required: {', '.join(matched_required)}
-Matched Preferred: {', '.join(matched_preferred)}
-Experience: {experience_summary}
-Score: {technical_score}
-Recommendation: {recommendation}
+            Return JSON with EVERY matched skill:
+            {{
+            "technical_match_score": {technical_score},
+            "skills_assessment": [
+                {{
+                    "skill": "Python", 
+                    "proficiency": "Advanced",
+                    "years": 3,
+                    "context": "Experience with pypi package management and Python development"
+                }},
+                // Must include ALL matched skills with details
+            ],
+            "technical_gaps": ["Missing X skills"],
+            "interview_questions": ["Questions about matched skills"],
+            "recommendation": "{recommendation}",
+            "key_findings": ["Key strengths based on matched skills"],
+            "concerns": ["Skill gaps"]
+            }}
 
-Important:
-1. Provide DETAILED responses for each field
-2. Include SPECIFIC examples from the resume
-3. Make interview questions RELEVANT to the role
-4. Base analysis on ACTUAL resume content
-5. Return ONLY the JSON object with NO additional text"""
+            Resume: {resume_text}
+            Required Skills: {', '.join(role_config['required_skills'])}
+            Min Experience: {role_config['min_years_experience']}
+            Score: {technical_score}
+
+            Note: Include detailed assessment for every skill marked as found above."""
 
             messages = [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ]
             
-            # Log the prompts for debugging
             logger.debug(f"System prompt: {system_prompt}")
             logger.debug(f"User prompt: {user_prompt}")
             
             response = self.execute_request(messages)
             content = response.choices[0].message.content
             
-            # Enhanced logging for response content
             logger.info("Received Mixtral response")
-            logger.debug(f"Raw LLM response content: {content[:500]}...")  # Log first 500 chars
+            logger.debug(f"Raw LLM response content: {content[:500]}...")
             
-            # Extract and clean JSON
             try:
                 json_str = self._extract_json_from_text(content)
-                logger.debug(f"Extracted JSON string: {json_str[:500]}...")  # Log extracted JSON
+                logger.debug(f"Extracted JSON string: {json_str[:500]}...")
                 
                 result = json.loads(json_str)
-                logger.debug(f"Successfully parsed JSON result: {json.dumps(result, indent=2)}")
+                logger.debug(
+                    f"Successfully parsed JSON result: {json.dumps(result, indent=2)}"
+                )
                 
-                # Force the technical score and recommendation
                 result['technical_match_score'] = technical_score
                 result['recommendation'] = recommendation
                 
-                # Enhanced validation with logging
                 required_fields = {
                     "technical_match_score": int,
                     "skills_assessment": list,
@@ -376,10 +350,10 @@ Important:
                 for field, field_type in required_fields.items():
                     if field not in result:
                         missing_fields.append(field)
-                        result[field] = [] if field_type == list else (0 if field_type == int else "")
+                        result[field] = ([] if field_type == list else 
+                                       0 if field_type == int else "")
                     elif not isinstance(result[field], field_type):
                         invalid_types.append(f"{field} (expected {field_type.__name__})")
-                        # Convert to correct type
                         if field_type == list:
                             result[field] = [result[field]] if result[field] else []
                         elif field_type == int:
@@ -395,15 +369,16 @@ Important:
                 if invalid_types:
                     logger.warning(f"Invalid field types in LLM response: {invalid_types}")
                 
-                # Log final processed result
                 logger.debug(f"Final processed result: {json.dumps(result, indent=2)}")
                 
                 return result
                 
             except json.JSONDecodeError as e:
                 logger.error(f"JSON parsing error: {str(e)}")
-                logger.error(f"Problematic content: {content[:500]}...")  # Log problematic content
-                return self._get_fallback_technical_response(technical_score, recommendation)
+                logger.error(f"Problematic content: {content[:500]}...")
+                return self._get_fallback_technical_response(
+                    technical_score, recommendation
+                )
                 
         except Exception as e:
             logger.error(f"Mixtral analysis failed: {str(e)}")
@@ -436,18 +411,18 @@ Important:
             "concerns": ["Unable to complete detailed analysis"]
         }
 
-    def _gemini_experience_analysis(self, resume_text, role_name):
+    def _gemini_experience_analysis(self, text: str, role_name: str) -> Dict[str, Any]:
         """Analyze and classify work experience using Gemini"""
         try:
             # Clean and normalize the resume text
-            resume_text = self._clean_text(resume_text)
+            text = self._clean_text(text)
             
             prompt = (
                 "You are an expert resume analyzer. "
                 "Create a structured analysis of the candidate's work experience "
                 "focusing on location, duration, and potential red flags.\n\n"
                 f"Role: {role_name}\n"
-                f"Resume:\n{resume_text}\n\n"
+                f"Resume:\n{text}\n\n"
                 "Instructions:\n"
                 "1. Calculate years of experience by location and type\n"
                 "2. Identify short-term positions (less than 1 year)\n"
@@ -456,10 +431,12 @@ Important:
                 "5. Flag any concerning patterns\n\n"
                 "Format your response EXACTLY like this example with quoted property names:\n"
                 '{\n'
-                '  "us_experience_years": 5.5,\n'
-                '  "non_us_experience_years": 2.0,\n'
-                '  "total_professional_years": 7.5,\n'
-                '  "internship_count": 1,\n'
+                '  "experience_summary": {\n'
+                '    "us_experience_years": 5.5,\n'
+                '    "non_us_experience_years": 2.0,\n'
+                '    "total_professional_years": 7.5,\n'
+                '    "internship_count": 1\n'
+                '  },\n'
                 '  "short_stints": [\n'
                 '    "Company A: 4 months",\n'
                 '    "Company B: 8 months"\n'
@@ -486,9 +463,7 @@ Important:
                 '5. Include all required fields, even if empty\n'
                 '6. Do not include any text before or after the JSON object\n'
                 '7. Do not use markdown formatting or code blocks\n'
-                '8. Ensure all arrays and objects are properly closed\n'
-                '9. Use proper JSON boolean values (true/false) and null\n'
-                '10. Keep analysis professional and objective'
+                '8. Ensure all arrays and objects are properly closed'
             )
 
             # Set up generation parameters to match Mixtral settings
@@ -542,38 +517,40 @@ Important:
             result = json.loads(json_str)
             
             # Validate required fields
-            required_fields = [
-                'us_experience_years', 'non_us_experience_years',
-                'total_professional_years', 'internship_count',
-                'short_stints', 'experience_gaps',
-                'experience_breakdown', 'experience_strength',
-                'experience_flags'
-            ]
-            
-            for field in required_fields:
-                if field not in result:
-                    raise ValueError(f"Missing required field: {field}")
-
-            # Convert numeric fields with dict comprehension
-            numeric_fields = {
-                'us_experience_years': float,
-                'non_us_experience_years': float,
-                'total_professional_years': float,
-                'internship_count': int
+            required_fields = {
+                'experience_summary': {
+                    'us_experience_years': float,
+                    'non_us_experience_years': float,
+                    'total_professional_years': float,
+                    'internship_count': int
+                },
+                'short_stints': list,
+                'experience_gaps': list,
+                'experience_breakdown': list,
+                'experience_strength': str,
+                'experience_flags': list
             }
             
-            for field, converter in numeric_fields.items():
-                try:
-                    result[field] = converter(result[field])
-                except (TypeError, ValueError) as e:
-                    logger.error(f"Error converting {field}: {str(e)}")
-                    result[field] = converter(0)
-
-            # Ensure arrays are never null
-            array_fields = ['short_stints', 'experience_gaps', 'experience_breakdown', 'experience_flags']
-            for field in array_fields:
-                if field not in result or result[field] is None:
-                    result[field] = []
+            # Validate and ensure all required fields exist
+            for field, field_type in required_fields.items():
+                if field not in result:
+                    if isinstance(field_type, dict):
+                        result[field] = {k: 0 for k in field_type.keys()}
+                    elif field_type == list:
+                        result[field] = []
+                    else:
+                        result[field] = ""
+                
+                # Validate nested fields for experience_summary
+                if field == 'experience_summary' and isinstance(result[field], dict):
+                    for subfield, subtype in field_type.items():
+                        if subfield not in result[field]:
+                            result[field][subfield] = 0
+                        else:
+                            try:
+                                result[field][subfield] = subtype(result[field][subfield])
+                            except (TypeError, ValueError):
+                                result[field][subfield] = 0
 
             return result
 
@@ -584,10 +561,12 @@ Important:
     def _get_fallback_experience_response(self):
         """Return a fallback experience analysis response"""
         return {
-            "us_experience_years": 0,
-            "non_us_experience_years": 0,
-            "total_professional_years": 0,
-            "internship_count": 0,
+            "experience_summary": {
+                "us_experience_years": 0,
+                "non_us_experience_years": 0,
+                "total_professional_years": 0,
+                "internship_count": 0
+            },
             "short_stints": [],
             "experience_gaps": [],
             "experience_breakdown": [],
@@ -609,57 +588,55 @@ Important:
             # Get scoring constraints with defaults
             scoring_constraints = role_config.get('scoring_constraints', {})
             max_score = scoring_constraints.get('max_score', 100)
-            required_skills_threshold = scoring_constraints.get('required_skills_threshold', 0.85)
-            minimum_skills_match = scoring_constraints.get('minimum_skills_match', 0.75)
-        
+            
             # Calculate required skills match
             total_required = len(role_config['required_skills'])
             matched_required = len(matched_skills.get('required', []))
             required_ratio = matched_required / total_required if total_required > 0 else 0
-        
+            
             # Calculate preferred skills match
             total_preferred = len(role_config['preferred_skills'])
             matched_preferred = len(matched_skills.get('preferred', []))
             preferred_ratio = matched_preferred / total_preferred if total_preferred > 0 else 0
-        
+            
             logger.info(f"Required skills match: {required_ratio:.2f} ({matched_required}/{total_required})")
             logger.info(f"Preferred skills match: {preferred_ratio:.2f} ({matched_preferred}/{total_preferred})")
-        
-            # Calculate final score with adjusted weights
-            skill_weights = config['scoring_config']['skill_weights']
-            required_weight = skill_weights['required']
-            preferred_weight = skill_weights['preferred']
-        
-            # Apply threshold adjustments
-            if required_ratio >= required_skills_threshold:
-                required_ratio *= 1.2  # 20% bonus for meeting high threshold
-            elif required_ratio >= minimum_skills_match:
-                required_ratio *= 1.1  # 10% bonus for meeting minimum threshold
+
+            # Base score calculation
+            base_score = 0
+            
+            # Strong match (85-100) - At least 5/9 required skills
+            if required_ratio >= 0.55:  # Increased from 0.44
+                if preferred_ratio >= 0.5:  # Increased from 0.4
+                    base_score = 92
+                elif preferred_ratio >= 0.3:  # Increased from 0.2
+                    base_score = 88
+                else:
+                    base_score = 85
+                
+            # Good match (70-84) - At least 4/9 required skills
+            elif required_ratio >= 0.44:  # Increased from 0.33
+                if preferred_ratio >= 0.3:  # Increased from 0.2
+                    base_score = 80
+                else:
+                    base_score = 75
+                
+            # Potential match (50-69)
+            elif required_ratio >= 0.33:  # Kept the same
+                base_score = 60
+                
+            # No match (<50)
             else:
-                required_ratio *= 0.8  # 20% penalty for not meeting minimum
+                base_score = 40
+
+            # Apply preferred skills bonus with reduced impact
+            preferred_bonus = min(8, int(preferred_ratio * 12))  # Reduced from 15
             
-            # Cap ratios at 1.0
-            required_ratio = min(1.0, required_ratio)
-            preferred_ratio = min(1.0, preferred_ratio)
+            final_score = min(max_score, base_score + preferred_bonus)
             
-            # Calculate weighted score with stricter scaling
-            raw_score = (
-                (required_ratio * required_weight + preferred_ratio * preferred_weight)
-                / (required_weight + preferred_weight)  # Normalize to 0-1 range
-                * max_score
-            )
-            
-            # Apply scaling based on required skills ratio
-            if required_ratio < minimum_skills_match:
-                raw_score *= 0.6  # Significant penalty
-            elif required_ratio < required_skills_threshold:
-                raw_score *= 0.8  # Moderate penalty
-            
-            # Round to nearest integer and ensure within bounds
-            final_score = min(max_score, max(0, round(raw_score)))
             logger.info(f"Final technical score: {final_score}/{max_score}")
             return final_score
-        
+            
         except Exception as e:
             logger.error(f"Error calculating technical score: {str(e)}")
             return 0

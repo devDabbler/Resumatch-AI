@@ -11,68 +11,76 @@ analysis_patterns:
     - 'with\s+(\d+)\+?\s*years?\s+(?:of\s+)?experience'
     - '(\d+)\+?\s*years?\s+(?:of\s+)?experience\s+in'
 
-  # Enhanced skill patterns to better match job requirements
   skills:
-    python: '\b(?:python|pandas|numpy)\b(?:\s+(?:development|implementation|experience|programming))?'
-    javascript: '\b(?:javascript|js|node\.js|react|angular|vue)\b(?:\s+(?:development|implementation|experience))?'
-    etl: '\b(?:etl|data pipeline|data integration|data transformation)\b(?:\s+(?:development|implementation|experience))?'
-    shell_scripting: '\b(?:shell script|bash|cron|automation|scripting)\b(?:\s+(?:development|implementation|experience))?'
-    time_series: '\b(?:time series|temporal data|time-based analytics)\b(?:\s+(?:analysis|processing|handling))?'
-    cloud: '\b(?:aws|azure|gcp|cloud computing|cloud deployment)\b(?:\s+(?:development|implementation|architecture|experience))?'
-    ai_ml: '\b(?:artificial intelligence|machine learning|ai platform|ml models)\b(?:\s+(?:development|implementation|experience))?'
-    version_control: '\b(?:git|gitlab|github|version control)\b(?:\s+(?:management|experience|workflow))?'
-    databases: '\b(?:sql|nosql|mongodb|postgresql|mysql)\b(?:\s+(?:development|implementation|experience))?'
-    frontend_frameworks: '\b(?:react|redux|vue|backbone|angular)\b(?:\s+(?:development|implementation|experience))?'
-    data_structures: '\b(?:data structures|algorithms|algorithm design|optimization)\b(?:\s+(?:implementation|experience))?'
-    agile: '\b(?:agile|scrum|sprint|kanban)\b(?:\s+(?:methodology|development|experience))?'
+    python: '\b(?:python|py3?|python[23]|pandas|numpy|django|flask|pypi|python-based)\b(?:\s*(?:development|programming|coding|experience|engineer|developer|skilled at|skilled|programming|coding|development|engineering|packages?|tools?|managers?))?'
+    javascript: '\b(?:javascript|js|node(?:\.?js)?|react|angular|vue(?:\.?js)?|typescript|es6)\b(?:\s*(?:languages?|skills?|tech(?:nolog(?:y|ies))?|stack|proficien(?:t|cy)|expertise|knowledge|background|development|programming|coding|experience|engineer|developer|skilled|programming|coding|development|engineering))*'
+    git: '\b(?:git(?:hub|lab)?|version\s*control|source\s*control)\b'
+    sql: '\b(?:sql|mysql|postgresql|postgres|oracle|sqlite|mssql)\b'
+    nosql: '\b(?:nosql|mongodb|mongo|dynamodb|cassandra|redis|elasticsearch)\b'
+    data_structures: '\b(?:data\s*structures?|algorithms?|algorithm\s*design|optimization)\b'
+    algorithms: '\b(?:algorithms?|algorithm\s*design|computational|complexity|optimization)\b'
+    ci_cd: '\b(?:ci(?:/|_|\s+)?cd|continuous\s*(?:integration|deployment|delivery)|jenkins|circleci|github\s*actions)\b'
+    system_design: '\b(?:system\s*design|architecture|distributed\s*systems?|scalable\s*systems?|high\s*availability)\b'
+    django: '\b(?:django|drf|django\s*rest\s*framework)\b'
+    nodejs: '\b(?:node(?:\.?js)?|express(?:\.?js)?|npm)\b'
+    graphql: '\b(?:graphql|graph\s*ql|apollo)\b'
+    rest_apis: '\b(?:rest\s*apis?|restful|api\s*development|web\s*services)\b'
+    aws: '\b(?:aws|amazon\s*web\s*services|ec2|s3|rds|lambda|cloudwatch|ecs|ecr)\b'
+    circleci: '\b(?:circleci|circle\s*ci)\b'
+    docker: '\b(?:docker|containerization|containers?)\b'
+    kubernetes: '\b(?:kubernetes|k8s|container\s*orchestration)\b'
+    react: '\b(?:react(?:\.?js)?|reactjs|react\s*native)\b'
+    vuejs: '\b(?:vue(?:\.?js)?|vuejs|vuex)\b'
 
-  # Enhanced context patterns for better skill assessment
   context:
-    - 'developed.{0,50}SKILL'
-    - 'implemented.{0,50}SKILL'
-    - 'architected.{0,50}SKILL'
-    - 'designed.{0,50}SKILL'
-    - 'automated.{0,50}SKILL'
-    - 'optimized.{0,50}SKILL'
-    - 'managed.{0,50}SKILL'
-    - 'deployed.{0,50}SKILL'
-    - 'SKILL.{0,50}experience'
-    - 'SKILL.{0,50}development'
-    - 'proficient.{0,50}SKILL'
-    - 'expertise.{0,50}SKILL'
+    - 'developed'
+    - 'implemented'
+    - 'architected'
+    - 'designed'
+    - 'automated'
+    - 'optimized'
+    - 'managed'
+    - 'deployed'
+    - 'experience'
+    - 'development'
+    - 'proficient'
+    - 'expertise'
+    - 'programming'
+    - 'coding'
+    - 'engineer'
+    - 'developer'
+    - 'worked'
+    - 'using'
+    - 'familiar'
+    - 'knowledge'
+    - 'built'
+    - 'created'
+    - 'maintained'
+    - 'languages'
+    - 'skills'
+    - 'technical'
+    - 'stack'
+    - 'tools'
+    - 'skilled'
 
 # Enhanced scoring configuration
 scoring_config:
   weights:
     technical:
-      skills: 0.35                    # Decreased to balance with experience
-      platform_specific_experience: 0.10  # Decreased
-      experience: 0.45                # Significantly increased
-      role_relevance: 0.07
-      us_market_fit: 0.03
-
-  experience_scoring:
-    minimum_years: 5
-    penalty_per_missing_year: 0.10    # Further reduced
-    max_penalty: 0.30                 # Further reduced
-    bonus_per_extra_year: 0.15        # Increased
-    max_bonus: 0.45                   # Significantly increased
+      skills: 0.40
+      platform_specific_experience: 0.15
+      experience: 0.35
+      role_relevance: 0.10
 
   thresholds:
-    strong_match: 70                  # Further lowered
-    good_match: 60                    # Further lowered
-    potential_match: 45               # Further lowered
-    minimum_match: 30                 # Further lowered
-
-  experience_weights:
-    us_professional_weight: 0.65      # Further decreased
-    non_us_professional_weight: 0.35  # Further increased
-    internship_weight: 0.15           # Further increased
-    college_project_weight: 0.10      # Further increased
+    strong_match: 85
+    good_match: 70
+    potential_match: 50
+    minimum_match: 30
 
   skill_weights:
-    required: 0.70                    # Decreased from 0.8
-    preferred: 0.30                   # Increased from 0.2
+    required: 0.75
+    preferred: 0.25
 
 # Job role definitions
 job_roles:
@@ -90,8 +98,8 @@ job_roles:
     min_years_experience: 5
     scoring_constraints:
       max_score: 100
-      required_skills_threshold: 0.45  # Drastically lowered from 0.60
-      minimum_skills_match: 0.35       # Drastically lowered from 0.50
+      required_skills_threshold: 0.70
+      minimum_skills_match: 0.60
     required_skills:
       - Python
       - Machine Learning
@@ -116,8 +124,8 @@ job_roles:
     skill_weights:
       core_ml: 0.30
       math: 0.25
-      data_tools: 0.20
-      devops: 0.15
+      data_tools: 0.25
+      devops: 0.20
     skill_groups:
       core_ml:
         - Machine Learning
@@ -164,29 +172,29 @@ job_roles:
     min_years_experience: 5
     scoring_constraints:
       max_score: 100
-      required_skills_threshold: 0.45
-      minimum_skills_match: 0.35
+      required_skills_threshold: 0.60
+      minimum_skills_match: 0.50
     required_skills:
-      - React
-      - JavaScript
       - Python
+      - JavaScript
       - Git
       - SQL
       - NoSQL
       - Data Structures
       - Algorithms
       - CI/CD
+      - System Design
     preferred_skills:
-      - Redux
-      - TypeScript
-      - Vue.js
-      - Angular
-      - GitLab
-      - Agile
-      - Shell Scripting
-      - Jest
-      - webpack
+      - Django
+      - Node.js
+      - GraphQL
       - REST APIs
+      - AWS
+      - CircleCI
+      - Docker
+      - Kubernetes
+      - React
+      - Vue.js
     skill_weights:
       frontend: 0.40
       backend: 0.30
@@ -207,198 +215,69 @@ job_roles:
         - REST APIs
       devops:
         - Git
-        - GitLab
         - CI/CD
-        - "AWS OR GCP OR Azure"
+        - GitLab
+        - Shell Scripting
       core_cs:
         - Data Structures
         - Algorithms
     key_responsibilities:
-      - "Design and develop full-stack enterprise applications"
-      - "Build responsive and efficient front-end interfaces using React"
-      - "Implement backend services and APIs"
-      - "Optimize application performance and user experience"
-      - "Collaborate on architecture and technical design"
-      - "Participate in code reviews and technical discussions"
-      - "Write clean, maintainable, and well-tested code"
-      - "Create technical documentation"
-      - "Deploy and maintain applications in cloud environments"
+      - Develop and maintain web applications
+      - Collaborate with cross-functional teams
+      - Implement responsive user interfaces
+      - Optimize application for performance and scalability
+      - Ensure code quality through testing and code reviews
+      - Troubleshoot and debug production issues
     soft_skills:
-      - "Problem-solving"
-      - "Technical leadership"
-      - "Client collaboration"
-      - "Communication"
-      - "Agile teamwork"
+      - Strong problem-solving skills
+      - Excellent communication skills
+      - Ability to work independently
+      - Attention to detail
+      - Continuous learning mindset
+      - Adaptability in fast-paced environments
+    skill_variations:
+      python: ['python', 'py', 'py3', 'python3', 'python2', 'pandas', 'numpy', 'django', 'flask']
+      javascript: ['javascript', 'js', 'node.js', 'nodejs', 'react', 'angular', 'vue', 'typescript', 'es6']
+      git: ['git', 'github', 'gitlab', 'version control', 'source control']
+      sql: ['sql', 'mysql', 'postgresql', 'postgres', 'oracle', 'sqlite', 'mssql']
+      nosql: ['nosql', 'mongodb', 'mongo', 'dynamodb', 'cassandra', 'redis', 'elasticsearch']
+      data_structures: ['data structures', 'datastructures', 'data-structures', 'algorithms', 'algorithm design']
+      algorithms: ['algorithms', 'algorithm design', 'computational', 'complexity', 'optimization']
+      ci_cd: ['ci/cd', 'continuous integration', 'continuous deployment', 'jenkins', 'circleci', 'github actions']
+      system_design: ['system design', 'architecture', 'distributed systems', 'scalable systems', 'high availability']
+      django: ['django', 'drf', 'django rest framework']
+      node_js: ['node.js', 'nodejs', 'express', 'npm']
+      graphql: ['graphql', 'graph ql', 'apollo']
+      rest_apis: ['rest apis', 'restful', 'api development', 'web services']
+      aws: ['aws', 'amazon web services', 'ec2', 's3', 'rds', 'lambda', 'cloudwatch', 'ecs', 'ecr']
+      circleci: ['circleci', 'circle ci']
+      docker: ['docker', 'containerization', 'containers']
+      kubernetes: ['kubernetes', 'k8s', 'container orchestration']
+      react: ['react', 'reactjs', 'react native']
+      vue_js: ['vue.js', 'vuejs', 'vue', 'vuex']
 
-  "Solutions Architect, ANZ, Australia":
-    role_type: technical
-    scoring_weights: technical
-    min_years_experience: 15
-    scoring_constraints:
-      max_score: 100
-      required_skills_threshold: 0.7
-      platform_specific_requirements:
-        - google_cloud
-        - bigquery
-        - dataplex
-        - dataflow
-        - dataproc
-      minimum_platform_skills: 3
-    required_skills:
-      - Solution Architecture
-      - Data Engineering
-      - Google Cloud Platform
-      - Data Governance
-      - ETL/ELT Pipelines
-      - Data Validation
-      - Real-Time Data Processing
-      - Data Modeling
-      - Python
-      - SQL
-      - BigQuery
-      - DevOps Practices
-      - BI Integration
-      - Security & Compliance
-    preferred_skills:
-      - Dataplex
-      - Dataflow
-      - Dataproc
-      - Vertex AI
-      - Docker
-      - Kubernetes
-      - DBT
-      - Advanced Analytics
-
-  "UI Designer":
-    role_type: technical
-    scoring_weights: technical
-    min_years_experience: 4
-    scoring_constraints:
-      max_score: 100
-      required_skills_threshold: 0.7
-    required_skills:
-      - UI Design
-      - UX Design
-      - Figma
-      - Sketch
-      - Adobe XD
-      - InVision
-      - Prototyping
-      - Wireframing
-      - User Research
-      - Typography
-      - Color Theory
-    preferred_skills:
-      - HTML/CSS
-      - JavaScript
-      - Responsive Design
-
-  "Engagement Manager":
-    role_type: managerial
-    scoring_weights: managerial
-    min_years_experience: 5
-    scoring_constraints:
-      max_score: 100
-      required_skills_threshold: 0.5
-    required_skills:
-      - Client Relationship Management
-      - Project Management
-      - Marketing Analytics
-      - Sales Analytics
-      - Supply Chain Analytics
-      - Data Science
-      - AI
-      - Machine Learning
-    preferred_skills:
-      - Business Intelligence
-      - Data Visualization
-
-  "ML Ops Engineer, Model Risk Management & Governance":
-    role_type: technical
-    scoring_weights: technical
-    min_years_experience: 5
-    scoring_constraints:
-      max_score: 100
-      required_skills_threshold: 0.7
-    required_skills:
-      - Python
-      - R
-      - Scala
-      - Model Development
-      - Model Validation
-      - Model Monitoring
-      - Risk Management
-      - Compliance
-      - Documentation Automation
-    preferred_skills:
-      - TensorFlow
-      - PyTorch
-      - Scikit-learn
-
-  "Solutions Architect, Health & Life Sciences":
-    role_type: technical
-    scoring_weights: technical
-    min_years_experience: 10
-    scoring_constraints:
-      max_score: 100
-      required_skills_threshold: 0.7
-    required_skills:
-      - Solution Architecture
-      - Cloud Computing (AWS, Azure, or GCP)
-      - Backend Integrations
-      - Software Architecture Design
-      - Business Development
-      - Technical Leadership
-    preferred_skills:
-      - Healthcare IT
-      - Life Sciences IT
-
-  "AWS Platform Data Engineer":
-    role_type: technical
-    scoring_weights: technical
-    min_years_experience: 7
-    scoring_constraints:
-      max_score: 100
-      required_skills_threshold: 0.7
-      platform_specific_requirements:
-        - aws
-      minimum_platform_skills: 2
-    required_skills:
-      - AWS
-      - Databricks
-      - Terraform
-      - Infrastructure as Code (IaC)
-      - Python
-      - Bash
-      - PowerShell
-      - Cloud Security
-    preferred_skills:
-      - Spark
-      - Kafka
-      - Airflow
-
-  "Site Reliability Engineer":
+  "DevOps Engineer":
     role_type: technical
     education:
       minimum: "Bachelor's degree"
-      preferred: "Master's degree"
       fields:
         - "Computer Science"
+        - "Information Technology"
         - "Related fields"
-        - "Equivalent professional experience"
+        - "Equivalent combination of education and experience"
     scoring_weights: technical
-    min_years_experience: 5
+    min_years_experience: 3
     scoring_constraints:
       max_score: 100
-      required_skills_threshold: 0.45
-      minimum_skills_match: 0.35
+      required_skills_threshold: 0.60
+      minimum_skills_match: 0.50
     required_skills:
       - Linux
-      - Kubernetes
-      - AWS
-      - GCP
-      - Azure
       - Python OR Ruby
+      - AWS OR GCP OR Azure
+      - Kubernetes
+      - CI/CD
+      - Infrastructure as Code
       - Networking
       - Database Management
       - NoSQL
