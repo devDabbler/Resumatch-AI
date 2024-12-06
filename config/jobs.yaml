@@ -1,36 +1,44 @@
-# Global configuration
-required_skills_match_threshold: 0.85  # Increased from 0.75 to ensure stronger skill matches
-
 # Analysis patterns for matching
 analysis_patterns:
   experience:
-    - '(\d+)\+?\s*years?.+experience'
-    - '(\d+)\+?\s*years?.+industry'
-    - 'experience\D*(\d+)\+?\s*years?'
-    - 'career\s+spanning\D*(\d+)\+?\s*years?'
-    - 'with\s+(\d+)\+?\s*years?\s+(?:of\s+)?experience'
-    - '(\d+)\+?\s*years?\s+(?:of\s+)?experience\s+in'
+    # Explicit year mentions (prioritize these patterns)
+    - '(\d+)\+?\s*(?:years?|yrs?)(?:\s+of)?\s+(?:experience|work|professional)'
+    - 'experience\s+of\s+(\d+)\+?\s*(?:years?|yrs?)'
+    - 'with\s+(\d+)\+?\s*(?:years?|yrs?)(?:\s+of)?\s+experience'
+    - '(\d+)\+?\s*(?:years?|yrs?)(?:\s+of)?\s+(?:industry|professional)'
+    - '(?:over|more\s+than)\s+(\d+)\+?\s*(?:years?|yrs?)'
+    - 'career\s+spanning\s+(\d+)\+?\s*(?:years?|yrs?)'
+    
+    # Date ranges (secondary patterns)
+    - '(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[a-z]*\.?\s+(\d{4})\s*(?:-|to|–)\s*(?:(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[a-z]*\.?\s+)?(\d{4}|\s*(?:Present|Current|Now))'
+    - '(\d{4})\s*(?:-|to|–)\s*(?:Present|Current|Now)'
+    - '(?:since|from)\s+(\d{4})'
+  
+  location_patterns:
+    us: '\b(?:US|USA|United\s+States|Dallas|TX|Texas|Boston|MA|Massachusetts|New\s+York|NY|California|CA|Seattle|WA|Washington|Chicago|IL|Illinois|Atlanta|GA|Georgia)\b'
+    india: '\b(?:India|Indian|Bangalore|Mumbai|Delhi|Hyderabad|Chennai|Pune|Kolkata)\b'
 
   skills:
     python: '\b(?:python|py3?|python[23]|pandas|numpy|django|flask|pypi|python-based)\b(?:\s*(?:development|programming|coding|experience|engineer|developer|skilled at|skilled|programming|coding|development|engineering|packages?|tools?|managers?))?'
-    javascript: '\b(?:javascript|js|node(?:\.?js)?|react|angular|vue(?:\.?js)?|typescript|es6)\b(?:\s*(?:languages?|skills?|tech(?:nolog(?:y|ies))?|stack|proficien(?:t|cy)|expertise|knowledge|background|development|programming|coding|experience|engineer|developer|skilled|programming|coding|development|engineering))*'
+    javascript: '\b(?:javascript|js|node(?:\.?js)?|react|angular|vue(?:\.?js)?|typescript|es6|frontend|front[\s-]?end)\b(?:\s*(?:languages?|skills?|tech(?:nolog(?:y|ies))?|stack|proficien(?:t|cy)|expertise|knowledge|background|development|programming|coding|experience|engineer|developer|skilled|programming|coding|development|engineering))*'
     git: '\b(?:git(?:hub|lab)?|version\s*control|source\s*control)\b'
     sql: '\b(?:sql|mysql|postgresql|postgres|oracle|sqlite|mssql)\b'
     nosql: '\b(?:nosql|mongodb|mongo|dynamodb|cassandra|redis|elasticsearch)\b'
     data_structures: '\b(?:data\s*structures?|algorithms?|algorithm\s*design|optimization)\b'
     algorithms: '\b(?:algorithms?|algorithm\s*design|computational|complexity|optimization)\b'
-    ci_cd: '\b(?:ci(?:/|_|\s+)?cd|continuous\s*(?:integration|deployment|delivery)|jenkins|circleci|github\s*actions)\b'
+    ci_cd: '\b(?:ci(?:/|_|\s+)?cd|continuous\s*(?:integration|deployment|delivery)|jenkins|circleci|github\s*actions|deployment|deploy(?:ing|ed)?)\b'
     system_design: '\b(?:system\s*design|architecture|distributed\s*systems?|scalable\s*systems?|high\s*availability)\b'
-    django: '\b(?:django|drf|django\s*rest\s*framework)\b'
-    nodejs: '\b(?:node(?:\.?js)?|express(?:\.?js)?|npm)\b'
+    nodejs: '\b(?:node(?:\.?js)?|nodejs|express(?:\.?js)?|npm)\b'
     graphql: '\b(?:graphql|graph\s*ql|apollo)\b'
-    rest_apis: '\b(?:rest\s*apis?|restful|api\s*development|web\s*services)\b'
+    rest_apis: '\b(?:rest(?:ful)?\s*api(?:s)?|api\s*development|web\s*services?|restful|rest\s*endpoints?|rest\s*services?|rest\s*architecture|backend\s*apis?|developed\s+apis?|created\s+apis?|backend\s+development)\b'
     aws: '\b(?:aws|amazon\s*web\s*services|ec2|s3|rds|lambda|cloudwatch|ecs|ecr)\b'
-    circleci: '\b(?:circleci|circle\s*ci)\b'
     docker: '\b(?:docker|containerization|containers?)\b'
     kubernetes: '\b(?:kubernetes|k8s|container\s*orchestration)\b'
     react: '\b(?:react(?:\.?js)?|reactjs|react\s*native)\b'
     vuejs: '\b(?:vue(?:\.?js)?|vuejs|vuex)\b'
+    frontend_development: '\b(?:frontend|front[\s-]?end|front\s*end|web\s*development|ui\s*development|client[\s-]?side|user\s*interface|ui|ux|user\s*experience|web\s*frontend|web\s*front[\s-]?end|javascript\s*development|front\s*end\s*technologies|front\s*end\s*tech(?:nologies)?)\b(?:\s*(?:development|programming|coding|experience|engineer|developer|technologies|development|engineering|applications?|interfaces?|specialist|expert|professional))*'
+    web_development: '\b(?:web\s*development|web\s*application|website|webapp|web\s*app|web\s*developer|web\s*engineer|web\s*platform|web\s*technologies|full[\s-]?stack|web\s*stack|web\s*based|full\s*stack\s*(?:software|developer|engineer)|stack\s*software\s*(?:developer|engineer)|software\s*developer|software\s*engineer)\b(?:\s*(?:development|programming|coding|experience|engineer|developer|technologies|development|engineering|applications?|interfaces?|specialist|expert|professional))*'
+    state_management: '\b(?:state\s*management|redux|vuex|mobx|recoil|context\s*api|state\s*container|application\s*state|global\s*state|state\s*handling|functional\s*(?:and|&)\s*class\s*(?:based\s*)?components|component\s*state)\b'
 
   context:
     - 'developed'
@@ -62,13 +70,22 @@ analysis_patterns:
     - 'stack'
     - 'tools'
     - 'skilled'
+    - 'developed'
+    - 'implementing'
+    - 'building'
+    - 'creating'
+    - 'responsible for'
+    - 'led'
+    - 'leading'
+    - 'architecture'
+    - 'solution'
 
 # Enhanced scoring configuration
 scoring_config:
   weights:
     technical:
       skills: 0.40
-      platform_specific_experience: 0.15
+      platform_specific_experience: 0.15 
       experience: 0.35
       role_relevance: 0.10
 
@@ -81,6 +98,11 @@ scoring_config:
   skill_weights:
     required: 0.75
     preferred: 0.25
+    
+  penalties:
+    missing_required: 0.20
+    experience_gap: 0.25
+    primary_skill_gap: 0.15
 
 # Job role definitions
 job_roles:
@@ -161,101 +183,107 @@ job_roles:
       - Team collaboration
 
   "Software Development Engineer, C3":
-    role_type: technical
-    education:
-      minimum: "Bachelor's degree"
-      fields:
-        - "Computer Science"
-        - "Related fields"
-        - "Equivalent combination of education and experience"
-    scoring_weights: technical
-    min_years_experience: 5
-    scoring_constraints:
-      max_score: 100
-      required_skills_threshold: 0.60
-      minimum_skills_match: 0.50
-    required_skills:
-      - Python
-      - JavaScript
-      - Git
-      - SQL
-      - NoSQL
-      - Data Structures
-      - Algorithms
-      - CI/CD
-      - System Design
-    preferred_skills:
-      - Django
-      - Node.js
-      - GraphQL
-      - REST APIs
-      - AWS
-      - CircleCI
-      - Docker
-      - Kubernetes
-      - React
-      - Vue.js
-    skill_weights:
-      frontend: 0.40
-      backend: 0.30
-      devops: 0.20
-      core_cs: 0.10
-    skill_groups:
-      frontend:
-        - React
+      role_type: technical
+      education:
+        minimum: "Bachelor's degree"
+        fields:
+          - "Computer Science"
+          - "Related fields"
+          - "Equivalent combination of education and experience"
+      scoring_weights: technical
+      min_years_experience: 5
+      scoring_constraints:
+        max_score: 100
+        required_skills_threshold: 0.60
+        minimum_skills_match: 0.50
+        experience_weight: 0.30
+        primary_skill_group: "frontend"  # Added to indicate primary skill focus
+        primary_skill_weight: 0.65       # Weight for primary skill group
+        experience_penalty: 0.25         # Penalty for not meeting min years
+        skill_group_penalty: 0.15        # Penalty for weak primary skill group
+      required_skills:
         - JavaScript
-        - Redux
+        - React
+        - Frontend Development
+        - Web Development
+        - Git
+        - REST APIs
+        - State Management
+        - CI/CD
+      preferred_skills:
         - TypeScript
         - Vue.js
         - Angular
-      backend:
-        - Python
-        - SQL
-        - NoSQL
-        - REST APIs
-      devops:
-        - Git
-        - CI/CD
-        - GitLab
-        - Shell Scripting
-      core_cs:
-        - Data Structures
-        - Algorithms
-    key_responsibilities:
-      - Develop and maintain web applications
-      - Collaborate with cross-functional teams
-      - Implement responsive user interfaces
-      - Optimize application for performance and scalability
-      - Ensure code quality through testing and code reviews
-      - Troubleshoot and debug production issues
-    soft_skills:
-      - Strong problem-solving skills
-      - Excellent communication skills
-      - Ability to work independently
-      - Attention to detail
-      - Continuous learning mindset
-      - Adaptability in fast-paced environments
-    skill_variations:
-      python: ['python', 'py', 'py3', 'python3', 'python2', 'pandas', 'numpy', 'django', 'flask']
-      javascript: ['javascript', 'js', 'node.js', 'nodejs', 'react', 'angular', 'vue', 'typescript', 'es6']
-      git: ['git', 'github', 'gitlab', 'version control', 'source control']
-      sql: ['sql', 'mysql', 'postgresql', 'postgres', 'oracle', 'sqlite', 'mssql']
-      nosql: ['nosql', 'mongodb', 'mongo', 'dynamodb', 'cassandra', 'redis', 'elasticsearch']
-      data_structures: ['data structures', 'datastructures', 'data-structures', 'algorithms', 'algorithm design']
-      algorithms: ['algorithms', 'algorithm design', 'computational', 'complexity', 'optimization']
-      ci_cd: ['ci/cd', 'continuous integration', 'continuous deployment', 'jenkins', 'circleci', 'github actions']
-      system_design: ['system design', 'architecture', 'distributed systems', 'scalable systems', 'high availability']
-      django: ['django', 'drf', 'django rest framework']
-      node_js: ['node.js', 'nodejs', 'express', 'npm']
-      graphql: ['graphql', 'graph ql', 'apollo']
-      rest_apis: ['rest apis', 'restful', 'api development', 'web services']
-      aws: ['aws', 'amazon web services', 'ec2', 's3', 'rds', 'lambda', 'cloudwatch', 'ecs', 'ecr']
-      circleci: ['circleci', 'circle ci']
-      docker: ['docker', 'containerization', 'containers']
-      kubernetes: ['kubernetes', 'k8s', 'container orchestration']
-      react: ['react', 'reactjs', 'react native']
-      vue_js: ['vue.js', 'vuejs', 'vue', 'vuex']
+        - Node.js
+        - GraphQL
+        - AWS
+        - Docker
+        - Kubernetes
+      skill_groups:
+        frontend:  # Primary skill group for this role
+          - JavaScript
+          - React
+          - Redux
+          - Vue.js
+          - Angular
+          - TypeScript
+          - Frontend Development
+          - Web Development
+        architecture:
+          - System Design
+          - REST APIs
+          - Microservices
+          - GraphQL
+        devops:
+          - Git
+          - GitLab
+          - CI/CD
+          - AWS
+          - Azure
+        data:
+          - SQL
+          - NoSQL
+          - ETL
+      experience_levels:
+        junior: [0, 3]
+        mid: [3, 5]
+        senior: [5, null]
+      skill_variations:
+        # Frontend variations
+        frontend_development: [
+          'frontend', 'front-end', 'front end',
+          'frontend developer', 'front-end developer', 'front end developer',
+          'frontend development', 'front-end development', 'front end development',
+          'frontend engineer', 'front-end engineer', 'front end engineer',
+          'ui development', 'ui developer', 'user interface',
+          'client-side', 'client side'
+        ]
+        
+        web_development: [
+          'web development', 'web developer', 'web engineer',
+          'web application', 'webapp', 'web app',
+          'website development', 'web platform',
+          'web technologies', 'web stack'
+        ]
+        
+        rest_apis: [
+          'rest', 'restful', 'rest api', 'restful api', 
+          'rest apis', 'restful apis', 'rest services',
+          'rest architecture', 'restful services',
+          'restful web services', 'rest endpoints',
+          'api development', 'api', 'apis'
+        ]
 
+        # Other variations unchanged but included for completeness
+        javascript: ['javascript', 'js', 'ecmascript', 'es6']
+        react: ['react', 'reactjs', 'react.js', 'react native']
+        state_management: ['redux', 'vuex', 'state', 'flux', 'context', 'state management']
+        typescript: ['typescript', 'ts', 'typed javascript']
+        vue: ['vue', 'vuejs', 'vue.js']
+        angular: ['angular', 'ng', 'angular.js', 'angularjs']
+        git: ['git', 'github', 'gitlab', 'version control']
+        ci_cd: ['ci/cd', 'continuous integration', 'continuous deployment', 'devops']
+        
   "DevOps Engineer":
     role_type: technical
     education:
