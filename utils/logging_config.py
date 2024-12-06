@@ -33,7 +33,7 @@ def setup_logging():
     file_handler.setFormatter(detailed_formatter)
     
     # Set up console handler for important info
-    console_handler = logging.StreamHandler()
+    console_handler = logging.StreamHandler(sys.stdout)  # Change to output to stdout
     console_handler.setLevel(console_log_level)
     console_handler.setFormatter(detailed_formatter)
     
@@ -56,6 +56,10 @@ def setup_logging():
         logger.handlers = []  # Clear any existing handlers
         logger.addHandler(file_handler)
         logger.addHandler(console_handler)
+
+    # Ensure logs are flushed immediately
+    for handler in root_logger.handlers:
+        handler.flush()  # Ensure logs are flushed immediately
 
 # Call this function at startup
 setup_logging()

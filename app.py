@@ -2,7 +2,7 @@ import streamlit as st
 import yaml
 import json
 import logging
-from utils.pdf import PDFProcessor, DOCXProcessor, DocumentProcessor
+from utils.pdf import PDFProcessor, DOCXProcessor
 from utils.matcher import JobMatcher
 from utils.llm import LLMAnalyzer
 from utils.report_generator import ReportGenerator
@@ -37,15 +37,6 @@ def display_results(analysis_results: Dict, rank: int = None):
             st.error("Invalid analysis results format")
             st.json(analysis_results)
             return
-
-        # Get experience details
-        experience_details = analysis_results.get('experience_details', {})
-        experience_summary = experience_details.get('experience_summary', {})
-        
-        # Get years from experience summary
-        total_years = experience_summary.get('total_professional_years', 0)
-        us_years = experience_summary.get('us_experience_years', 0)
-        non_us_years = experience_summary.get('non_us_experience_years', 0)
 
         # Add Download PDF section at the top
         st.markdown("### 📊 Analysis Report")
@@ -89,17 +80,6 @@ def display_results(analysis_results: Dict, rank: int = None):
                 unsafe_allow_html=True
             )
 
-        # Display experience breakdown
-        st.subheader("Experience Overview")
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.metric("Total Experience", f"{total_years:.1f} years")
-        with col2:
-            st.metric("US Experience", f"{us_years:.1f} years")
-        with col3:
-            st.metric("Non-US Experience", f"{non_us_years:.1f} years")
-
         # Initialize recommendation color
         recommendation_color = "#ffc107"  # Default warning yellow
 
@@ -118,7 +98,7 @@ def display_results(analysis_results: Dict, rank: int = None):
             recommendation_color = "#17a2b8"  # Bootstrap info blue
         else:
             st.warning("⚠️ Not a Match - Do Not Proceed")
-            
+
         # Display match score with visual meter
         score = analysis_results['technical_match_score']
         st.markdown(
@@ -184,40 +164,6 @@ def display_results(analysis_results: Dict, rank: int = None):
                 )
             st.markdown("</div>", unsafe_allow_html=True)
 
-        # Display skills assessment if available
-        if analysis_results.get("skills_assessment"):
-            st.markdown("### 🔍 Skills Assessment")
-            for skill in analysis_results["skills_assessment"]:
-                try:
-                    # Extract skill data with proper error handling
-                    skill_name = skill.get('skill', 'Unknown Skill')
-                    proficiency = skill.get('proficiency', 'Not Specified')
-                    years = skill.get('years', 0)
-                    context = skill.get('context', '')
-
-                    st.markdown(
-                        f"""
-                        <div style='margin-bottom: 0.8rem; padding: 0.8rem;
-                             background: #f8f9fa; border-radius: 8px;'>
-                            <strong>{skill_name}</strong><br/>
-                            <span style='color: #666;'>Proficiency:</span> {proficiency}<br/>
-                            <span style='color: #666;'>Experience:</span> {years} year(s)
-                            {f"<br/><span style='color: #666;'>Context:</span> {context}" if context else ""}
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-                except Exception as e:
-                    logger.warning(f"Error displaying skill: {str(e)}")
-                    # Display raw skill data for debugging
-                    st.markdown(f"```\n{skill}\n```")
-
-        # Display technical gaps if available
-        if analysis_results.get("technical_gaps"):
-            st.markdown("### 🎯 Technical Gaps")
-            for gap in analysis_results["technical_gaps"]:
-                st.markdown(f"- {gap}")
-
     except Exception as e:
         logger.error(f"Error displaying results: {str(e)}")
         st.error("Error displaying results")
@@ -225,53 +171,85 @@ def display_results(analysis_results: Dict, rank: int = None):
         st.json(analysis_results)  # Show raw results for debugging
 
 def home_page():
-    """Display the home page with app introduction and CTA"""
-    logger.info("Displaying home page")
+    """Display the enhanced home page"""
     st.markdown(
         """
-        <div style='text-align: center; padding: 1rem 0;'>
-            <h1 style='font-size: 3em; margin-bottom: 0.5rem;'>Resumatch AI</h1>
-            <p style='color: #6c757d; font-size: 1.2em; margin-bottom: 1rem;'>
-                Intelligent Resume Analysis for Modern Recruitment
+        <div style='text-align: center; padding: 2rem 0;
+             background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+             border-radius: 10px; margin-bottom: 2rem;'>
+            <h1 style='font-size: 3.5em; color: white; margin-bottom: 1rem;'>
+                🤖 Resumatch AI
+            </h1>
+            <p style='color: #e3f2fd; font-size: 1.4em;'>
+                Next-Generation Resume Analysis for Modern Recruitment
             </p>
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    # Main value proposition
+    # Features section with icons
     st.markdown(
         """
-        <div style='background-color: #f8f9fa; border-radius: 10px; 
-             padding: 1.5rem; margin: 0.5rem 0;'>
-            <h2 style='text-align: center; font-size: 1.8em; margin-bottom: 1rem;'>
-                Why Resumatch AI?
+        <div style='display: grid; grid-template-columns: repeat(3, 1fr); 
+             gap: 2rem; margin: 2rem 0;'>
+            <div style='text-align: center; padding: 2rem; 
+                 background: #f8f9fa; border-radius: 10px;
+                 box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);'>
+                <div style='font-size: 3em; margin-bottom: 1rem;'>🎯</div>
+                <h3 style='color: #1a237e; margin-bottom: 1rem;'>
+                    Smart Matching
+                </h3>
+                <p style='color: #666;'>
+                    AI-powered skill matching and candidate evaluation
+                </p>
+            </div>
+            <div style='text-align: center; padding: 2rem;
+                 background: #f8f9fa; border-radius: 10px;
+                 box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);'>
+                <div style='font-size: 3em; margin-bottom: 1rem;'>⚡</div>
+                <h3 style='color: #1a237e; margin-bottom: 1rem;'>
+                    Instant Analysis
+                </h3>
+                <p style='color: #666;'>
+                    Get comprehensive results in seconds
+                </p>
+            </div>
+            <div style='text-align: center; padding: 2rem;
+                 background: #f8f9fa; border-radius: 10px;
+                 box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);'>
+                <div style='font-size: 3em; margin-bottom: 1rem;'>📊</div>
+                <h3 style='color: #1a237e; margin-bottom: 1rem;'>
+                    Detailed Reports
+                </h3>
+                <p style='color: #666;'>
+                    Generate professional PDF reports instantly
+                </p>
+            </div>
+        </div>
+
+        <!-- Powered By Section -->
+        <div style='text-align: center; margin: 3rem 0; padding: 2rem;
+             background: #f8f9fa; border-radius: 10px;
+             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);'>
+            <h2 style='color: #1a237e; margin-bottom: 2rem; font-size: 2em;'>
+                Powered By Advanced AI
             </h2>
-            <div style='display: grid; grid-template-columns: repeat(3, 1fr); 
-                 gap: 1.5rem; margin-top: 0.5rem;'>
-                <div>
-                    <h3 style='color: #0066cc; font-size: 1.3em; margin-bottom: 0.5rem;'>
-                        🎯 Smart Calibration
-                    </h3>
-                    <p style='font-size: 1.1em; color: #444;'>
-                        Quickly calibrate resumes against job requirements using advanced AI technology for deep candidate insights
-                    </p>
+            <div style='display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem;'>
+                <div style='text-align: center;'>
+                    <div style='font-size: 3em; margin-bottom: 1rem;'>🧠</div>
+                    <h3 style='color: #1a237e; margin-bottom: 0.5rem;'>Mixtral AI</h3>
+                    <p style='color: #666;'>Advanced LLM for Technical Analysis</p>
                 </div>
-                <div>
-                    <h3 style='color: #0066cc; font-size: 1.3em; margin-bottom: 0.5rem;'>
-                        💡 Instant Screening
-                    </h3>
-                    <p style='font-size: 1.1em; color: #444;'>
-                        Get comprehensive analysis and stack ranking in seconds to conduct more focused and valuable recruiter screens
-                    </p>
+                <div style='text-align: center;'>
+                    <div style='font-size: 3em; margin-bottom: 1rem;'>🤖</div>
+                    <h3 style='color: #1a237e; margin-bottom: 0.5rem;'>Gemini Pro</h3>
+                    <p style='color: #666;'>Google's AI for Experience Validation</p>
                 </div>
-                <div>
-                    <h3 style='color: #0066cc; font-size: 1.3em; margin-bottom: 0.5rem;'>
-                        ⚡ Smart Insights
-                    </h3>
-                    <p style='font-size: 1.1em; color: #444;'>
-                        Help business teams identify top talent with tailored interview questions and detailed evaluations
-                    </p>
+                <div style='text-align: center;'>
+                    <div style='font-size: 3em; margin-bottom: 1rem;'>⚡</div>
+                    <h3 style='color: #1a237e; margin-bottom: 0.5rem;'>Groq</h3>
+                    <p style='color: #666;'>Ultra-Fast AI Inference</p>
                 </div>
             </div>
         </div>
@@ -279,30 +257,18 @@ def home_page():
         unsafe_allow_html=True
     )
 
-    # Powered by section
-    st.markdown(
-        """
-        <div style='text-align: center; padding: 1rem 0; margin-top: 0.5rem;'>
-            <h3 style='font-size: 2em; margin-bottom: 1rem;'>Powered By</h3>
-            <div style='display: flex; justify-content: center; gap: 3rem; 
-                 margin-top: 1rem; font-size: 1.4em;'>
-                <div>🧠 Mixtral AI from Mistral</div>
-                <div>🤖 Gemini from Google</div>
-                <div>⚡ Streamlit</div>
-            </div>
-            <div style='margin-top: 1rem; font-size: 1.1em; color: #6c757d;'>
-                Leveraging state-of-the-art AI models for comprehensive resume analysis
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    # CTA button
-    if st.button("🚀 Get Started!", type="primary", use_container_width=True):
-        logger.info("User clicked 'Get Started' button")
+    # Call to action button that actually works
+    if st.button(
+        "🚀 Get Started",
+        type="primary",
+        use_container_width=True,
+        key="get_started_button"
+    ):
         st.session_state.page = "evaluation"
         st.rerun()
+
+    # Add some space at the bottom
+    st.markdown("<div style='margin-bottom: 4rem;'></div>", unsafe_allow_html=True)
 
 def evaluation_page():
     """Display the resume evaluation page"""
@@ -315,33 +281,59 @@ def evaluation_page():
     job_matcher = JobMatcher('config/jobs.yaml')
     llm_analyzer = LLMAnalyzer()
 
-    # Header
+    # Enhanced Header with Logo and Title
     st.markdown(
         """
-        <div style='text-align: center; padding: 2rem 0;'>
-            <h2 style='font-size: 2.8em;'>📄 Resume Evaluation</h2>
-            <p style='color: #6c757d; font-size: 1.4em;'>
-                Upload resumes and select a job role for instant AI-powered analysis
+        <div style='text-align: center; padding: 1rem; margin-bottom: 2rem; 
+             background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+             border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);'>
+            <div style='font-size: 3em; color: white; margin-bottom: 0.5rem;'>
+                🤖 Resumatch AI
+            </div>
+            <div style='font-size: 1.2em; color: #e3f2fd;'>
+                Intelligent Resume Analysis Powered by AI
+            </div>
+        </div>
+        
+        <div style='text-align: center; padding: 1rem 0 2rem 0;'>
+            <h2 style='font-size: 2.4em; margin-bottom: 0.5rem;'>
+                📄 Resume Evaluation Portal
+            </h2>
+            <p style='color: #666; font-size: 1.2em;'>
+                Upload resumes and let AI analyze them against your job requirements
             </p>
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    # Create two columns for layout
+    # Create two columns with adjusted ratio
     col1, col2 = st.columns([1, 2])
 
     with col1:
-        # Job role selection
+        # Styled container for controls
+        st.markdown(
+            """
+            <div style='padding: 1rem; background: #f8f9fa; border-radius: 10px;
+                 box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);'>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        
+        # Job role selection with emoji
+        st.markdown("### 🎯 Select Job Role")
         selected_role = st.selectbox(
-            "Select Job Role",
-            options=list(config['job_roles'].keys())
+            "",  # Empty label since we use markdown above
+            options=list(config['job_roles'].keys()),
+            key="role_selector"
         )
         logger.info(f"Selected job role: {selected_role}")
 
-        # Multiple file upload
+        # File upload section with emoji
+        st.markdown("### 📎 Upload Resumes")
         uploaded_files = st.file_uploader(
-            "Upload Resumes (PDF/DOCX)",
+            "",  # Empty label since we use markdown above
             type=["pdf", "docx"],
             accept_multiple_files=True,
             help="Upload up to 5 resumes in PDF or DOCX format"
@@ -351,34 +343,40 @@ def evaluation_page():
             if len(uploaded_files) > 5:
                 logger.warning("User attempted to upload more than 5 resumes")
                 st.warning(
-                    "⚠️ Maximum 5 resumes allowed. Only the first 5 will be analyzed."
+                    "���️ Maximum 5 resumes allowed. Only the first 5 will be analyzed."
                 )
                 uploaded_files = uploaded_files[:5]
             
-            logger.info(f"Successfully uploaded {len(uploaded_files)} resume(s)")
+            # Show file list with emojis
+            st.markdown("#### 📋 Uploaded Files:")
+            for file in uploaded_files:
+                icon = "📄" if file.name.endswith('.pdf') else "📝"
+                st.markdown(f"{icon} {file.name}")
+            
+            # Success message with count
             st.success(f"✅ {len(uploaded_files)} resume(s) uploaded successfully")
             
-            if st.button("🔍 Analyze Resumes", type="primary", use_container_width=True):
+            # Analyze button with enhanced styling
+            if st.button(
+                "🔍 Analyze Resumes",
+                type="primary",
+                use_container_width=True,
+            ):
                 logger.info("Starting resume analysis")
-                with st.spinner("🔄 Processing resumes..."):
+                with st.spinner("🤖 AI is analyzing your resumes..."):
                     try:
                         all_results = []
                         
                         # Process each resume
                         for file in uploaded_files:
                             logger.info(f"Processing resume: {file.name}")
-                            
-                            # Process based on file type
+                            # Process file based on type
                             if file.name.lower().endswith('.pdf'):
                                 resume_text = pdf_processor.extract_text(file)
-                            elif file.name.lower().endswith('.docx'):
+                            else:  # DOCX
                                 resume_text = docx_processor.extract_text(file)
-                            else:
-                                logger.warning(f"Unsupported file type: {file.name}")
-                                continue
-                                
-                            # Extract sections using DocumentProcessor
-                            resume_sections = DocumentProcessor.extract_sections(resume_text)
+                            
+                            resume_sections = pdf_processor.extract_sections(resume_text)
 
                             # Match patterns
                             experience_matches = job_matcher.extract_experience(
@@ -450,14 +448,38 @@ def evaluation_page():
                                 "Please try again. If the error persists, "
                                 "check the logs for details."
                             )
-        else:
-            with col2:
-                st.markdown(
-                    "<div style='text-align: center; font-size: 1.2em;'>"
-                    "👈 Please upload resumes and select a job role to begin analysis"
-                    "</div>",
-                    unsafe_allow_html=True
-                )
+
+    with col2:
+        if not uploaded_files:
+            # Show welcome message when no files are uploaded
+            st.markdown(
+                """
+                <div style='text-align: center; padding: 2rem; 
+                     background: #f8f9fa; border-radius: 10px; margin-top: 2rem;'>
+                    <div style='font-size: 4em; margin-bottom: 1rem;'>
+                        👋
+                    </div>
+                    <h3 style='color: #1a237e; margin-bottom: 1rem;'>
+                        Welcome to Resumatch AI!
+                    </h3>
+                    <p style='color: #666; font-size: 1.1em;'>
+                        Get started by selecting a job role and uploading resumes
+                    </p>
+                    <div style='margin-top: 2rem; color: #666;'>
+                        <div style='margin-bottom: 0.5rem;'>
+                            ✨ AI-Powered Analysis
+                        </div>
+                        <div style='margin-bottom: 0.5rem;'>
+                            🎯 Precise Skill Matching
+                        </div>
+                        <div style='margin-bottom: 0.5rem;'>
+                            ⚡ Instant Results
+                        </div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
 def main():
     """Main application entry point"""
