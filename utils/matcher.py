@@ -49,14 +49,15 @@ class JobMatcher:
 
         # Enhanced experience patterns
         experience_patterns = [
-            r'(\d+)\+?\s*(?:years?|yrs?)(?:\s+(?:of\s+)?(?:experience|work))?',  # "5+ years experience"
+            r'(\d+)\+?\s*(?:years?|yrs?)(?:\s+(?:of\s+)?(?:experience|work|research))?',  # "5+ years experience"
             r'(?:over|more\s+than)\s+(\d+)\s*(?:years?|yrs?)',  # "over 5 years"
-            r'(?:experience|work).*?(\d+)\+?\s*(?:years?|yrs?)',  # "experience of 5 years"
-            r'(\d+)\+?\s*(?:years?|yrs?).*?(?:experience|work)',  # "5 years of experience"
+            r'(?:experience|work|research).*?(\d+)\+?\s*(?:years?|yrs?)',  # "experience of 5 years"
+            r'(\d+)\+?\s*(?:years?|yrs?).*?(?:experience|work|research)',  # "5 years of experience"
             r'career\s+spanning\s+(\d+)\+?\s*(?:years?|yrs?)',  # "career spanning 5 years"
             r'(?:since|from)\s+(\d{4})',  # "since 2015"
         ]
 
+        # First try to extract explicit year mentions
         for pattern in experience_patterns:
             found = re.finditer(pattern, text, re.IGNORECASE)
             for match in found:
@@ -73,8 +74,8 @@ class JobMatcher:
                 except (ValueError, IndexError) as e:
                     logger.warning(f"Error parsing years: {e}")
 
-        # Try career span calculation from dates
-        date_pattern = r'(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{4})'
+        # Enhanced date range detection
+        date_pattern = r'(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[a-z]*\.?\s+(\d{4})'
         date_matches = list(re.finditer(date_pattern, text, re.IGNORECASE))
         
         if date_matches:
@@ -86,13 +87,26 @@ class JobMatcher:
                 dates.append(current_year)
             
             if dates:
-                earliest = min(dates)
-                latest = max(dates)
-                if latest > earliest and (latest - earliest) < 50:  # Sanity check
-                    years.add(latest - earliest)
+                # Sort dates to find distinct periods
+                dates = sorted(set(dates))
+                total_years = 0
+                
+                # Calculate years for each period
+                for i in range(0, len(dates)-1, 2):
+                    start = dates[i]
+                    end = dates[i+1] if i+1 < len(dates) else current_year
+                    period_years = end - start
+                    if period_years > 0 and period_years < 50:  # Sanity check
+                        total_years += period_years
+                        years.add(period_years)
 
-        # Calculate total years
+        # Calculate total years, including research experience
         total_years = max(years) if years else 0
+        
+        # Add bonus for research experience and advanced degrees
+        if re.search(r'(?:research|phd|master|thesis|dissertation)', text, re.IGNORECASE):
+            research_bonus = 2  # Add 2 years equivalent for research/advanced degree
+            total_years = min(total_years + research_bonus, total_years * 1.5)  # Cap at 50% increase
             
         result = {
             'matches': matches,
@@ -115,12 +129,22 @@ class JobMatcher:
             'context': {}
         }
 
-        # Match required skills
+        # Match required skills with OR logic support
         for skill in role_config.get('required_skills', []):
-            result = self.check_skill(skill, text)
-            if result['matched']:
-                matches['required'].append(skill)
-                matches['context'][skill] = result['context']
+            if ' OR ' in skill:
+                # Handle OR conditions
+                alternatives = [s.strip() for s in skill.split(' OR ')]
+                for alt in alternatives:
+                    result = self.check_skill(alt, text)
+                    if result['matched']:
+                        matches['required'].append(skill)
+                        matches['context'][skill] = result['context']
+                        break
+            else:
+                result = self.check_skill(skill, text)
+                if result['matched']:
+                    matches['required'].append(skill)
+                    matches['context'][skill] = result['context']
 
         # Match preferred skills
         for skill in role_config.get('preferred_skills', []):
@@ -147,8 +171,13 @@ class JobMatcher:
                 if skill_lower in self.skill_variations:
                     variations.extend(self.skill_variations[skill_lower])
                 
-                # Add the original skill name
+                # Add the original skill name and common variations
                 variations.append(skill.lower())
+                variations.extend([
+                    skill.lower().replace(' ', ''),  # Remove spaces
+                    skill.lower().replace(' ', '-'),  # Hyphenated
+                    skill.lower().replace(' ', '_')   # Underscored
+                ])
                 
                 # Create pattern that matches any variation
                 pattern = r'\b(?:' + '|'.join(map(re.escape, variations)) + r')\b'
@@ -163,16 +192,19 @@ class JobMatcher:
                 context = text[start:end].strip()
                 
                 # Check if in skills section - more lenient check
-                if re.search(r'(?:skills?|expertise|proficiency|competencies|tools|technologies)', text, re.IGNORECASE):
+                if re.search(r'(?:skills?|expertise|proficiency|competencies|tools|technologies|technical|strengths)', text, re.IGNORECASE):
                     return {'matched': True, 'context': None}
                 
-                # More lenient context patterns
+                # More lenient context patterns including research/academic terms
                 context_patterns = [
                     r'(?:using|with|in|implemented|developed|built|created|designed|managed|led|worked|utilized|applied)',
                     r'(?:experience|expertise|proficiency|knowledge|understanding|background|familiarity)',
                     r'(?:certification|certified|trained|studied|learned|mastered)',
                     r'(?:projects?|applications?|systems?|platforms?|solutions?|frameworks?|tools?)',
-                    r'(?:analysis|analytics|development|implementation|architecture)'
+                    r'(?:analysis|analytics|development|implementation|architecture)',
+                    r'(?:research|paper|publication|thesis|dissertation|study)',
+                    r'(?:algorithm|model|method|technique|approach)',
+                    r'(?:developed|implemented|designed|optimized|enhanced)'
                 ]
                 
                 has_context = any(re.search(p, context, re.IGNORECASE) for p in context_patterns)
@@ -223,16 +255,16 @@ class JobMatcher:
         min_preferred = len(role_config.get('preferred_skills', []))
         preferred_ratio = total_preferred / min_preferred if min_preferred > 0 else 0.0
         
-        # Calculate experience score with fixed values for specific years
+        # Calculate experience score with research consideration
         min_years = role_config.get('min_years_experience', 4)
-        if experience_years == 1:  # Handle 1 year case first
-            experience_score = 25
-        elif experience_years >= 2:  # 2+ years gets full score
+        if experience_years >= min_years:
             experience_score = 100
-        elif experience_years >= min_years * 0.25:  # 25% of required experience
-            experience_score = 50
+        elif experience_years >= min_years * 0.75:
+            experience_score = 85
+        elif experience_years >= min_years * 0.5:
+            experience_score = 70
         else:
-            experience_score = 0
+            experience_score = max(25, (experience_years / min_years) * 100)
 
         # Calculate raw skills score
         raw_skills = (required_ratio * required_weight + preferred_ratio * preferred_weight) * 100
@@ -240,7 +272,7 @@ class JobMatcher:
 
         # Adjust skills score for high skill matches
         if required_ratio >= 0.85 and preferred_ratio >= 0.5:
-            skills_score = 85
+            skills_score = max(skills_score, 85)  # Ensure minimum 85 for strong skill matches
 
         # Get role-specific weights
         weights = self.scoring_config.get('weights', {}).get(
@@ -270,23 +302,8 @@ class JobMatcher:
                 }
             }
 
-        # Handle edge case: no experience but all skills
-        if experience_years == 0 and required_ratio >= 0.75:
-            return {
-                'technical_match_score': 46,  # Fixed score for this edge case
-                'skills_score': skills_score,
-                'experience_score': 0,
-                'analysis': 'Skills without experience',
-                'skills_breakdown': {
-                    'required_match': float(required_ratio * 100),
-                    'preferred_match': float(preferred_ratio * 100),
-                    'required_score': float(required_ratio),
-                    'preferred_score': float(preferred_ratio)
-                }
-            }
-
         # Check required skills threshold
-        threshold = self.config.get('required_skills_match_threshold', 0)
+        threshold = role_config.get('scoring_constraints', {}).get('required_skills_threshold', 0.6)
         if required_ratio < threshold:
             technical_score = 35  # Fixed score for no match
             return {
@@ -304,19 +321,17 @@ class JobMatcher:
 
         # Determine score range based on combined factors
         if required_ratio >= 0.85 and experience_years >= min_years:
-            technical_score = 95  # Strong match with high experience
+            technical_score = max(technical_score, 95)  # Strong match with high experience
+        elif required_ratio >= 0.75 and experience_years >= min_years * 0.75:
+            technical_score = max(technical_score, 85)  # Strong match
         elif required_ratio >= 0.6:  # Good match threshold
             if experience_years >= min_years * 0.5:
-                technical_score = 75  # Fixed good match score
-            else:
-                technical_score = 42  # Ensure score components test passes
-                
+                technical_score = max(technical_score, 75)  # Fixed good match score
+            
             # Force good match range
             technical_score = max(70, min(84, technical_score))
         elif required_ratio >= 0.5 and experience_years >= min_years * 0.5:
             technical_score = max(50, min(69, technical_score))   # Potential match: 50-69
-        else:
-            technical_score = 42  # Fixed score for score components test
 
         return {
             'technical_match_score': technical_score,

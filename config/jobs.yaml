@@ -2,10 +2,10 @@
 analysis_patterns:
   experience:
     # Explicit year mentions (prioritize these patterns)
-    - '(\d+)\+?\s*(?:years?|yrs?)(?:\s+of)?\s+(?:experience|work|professional)'
+    - '(\d+)\+?\s*(?:years?|yrs?)(?:\s+of)?\s+(?:experience|work|professional|research)'
     - 'experience\s+of\s+(\d+)\+?\s*(?:years?|yrs?)'
     - 'with\s+(\d+)\+?\s*(?:years?|yrs?)(?:\s+of)?\s+experience'
-    - '(\d+)\+?\s*(?:years?|yrs?)(?:\s+of)?\s+(?:industry|professional)'
+    - '(\d+)\+?\s*(?:years?|yrs?)(?:\s+of)?\s+(?:industry|professional|research)'
     - '(?:over|more\s+than)\s+(\d+)\+?\s*(?:years?|yrs?)'
     - 'career\s+spanning\s+(\d+)\+?\s*(?:years?|yrs?)'
     
@@ -13,32 +13,33 @@ analysis_patterns:
     - '(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[a-z]*\.?\s+(\d{4})\s*(?:-|to|–)\s*(?:(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[a-z]*\.?\s+)?(\d{4}|\s*(?:Present|Current|Now))'
     - '(\d{4})\s*(?:-|to|–)\s*(?:Present|Current|Now)'
     - '(?:since|from)\s+(\d{4})'
+    - '(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[a-z]*\.?\s+(\d{4})'
   
   location_patterns:
-    us: '\b(?:US|USA|United\s+States|Dallas|TX|Texas|Boston|MA|Massachusetts|New\s+York|NY|California|CA|Seattle|WA|Washington|Chicago|IL|Illinois|Atlanta|GA|Georgia)\b'
+    us: '\b(?:US|USA|United\s+States|Dallas|TX|Texas|Boston|MA|Massachusetts|New\s+York|NY|California|CA|Seattle|WA|Washington|Chicago|IL|Illinois|Atlanta|GA|Georgia|San\s+Mateo|Minneapolis|MN|Minnesota|Saint\s+Paul|St\.\s*Paul)\b'
     india: '\b(?:India|Indian|Bangalore|Mumbai|Delhi|Hyderabad|Chennai|Pune|Kolkata)\b'
 
   skills:
-    python: '\b(?:python|py3?|python[23]|pandas|numpy|django|flask|pypi|python-based)\b(?:\s*(?:development|programming|coding|experience|engineer|developer|skilled at|skilled|programming|coding|development|engineering|packages?|tools?|managers?))?'
-    javascript: '\b(?:javascript|js|node(?:\.?js)?|react|angular|vue(?:\.?js)?|typescript|es6|frontend|front[\s-]?end)\b(?:\s*(?:languages?|skills?|tech(?:nolog(?:y|ies))?|stack|proficien(?:t|cy)|expertise|knowledge|background|development|programming|coding|experience|engineer|developer|skilled|programming|coding|development|engineering))*'
+    python: '\b(?:python|py3?|python[23]|pandas|numpy|scipy|scikit|pytorch|tensorflow)\b(?:\s*(?:development|programming|coding|experience|engineer|developer|skilled at|skilled|programming|coding|development|engineering|packages?|tools?|managers?))?'
+    machine_learning: '\b(?:machine\s*learning|ml|deep\s*learning|dl|neural\s*networks?|transformer|bert|clip|stable\s*diffusion|vision\s*transformer|llm|large\s*language\s*models?|generative\s*ai)\b'
+    statistics: '\b(?:statistical|stats?|probability|regression|hypothesis\s*testing|statistical\s*analysis|mathematical|mathematics|math|quantitative)\b'
+    data_visualization: '\b(?:data\s*viz|visualization|tableau|powerbi|matplotlib|seaborn|plotly|charts?|graphs?|plotting)\b'
     git: '\b(?:git(?:hub|lab)?|version\s*control|source\s*control)\b'
-    sql: '\b(?:sql|mysql|postgresql|postgres|oracle|sqlite|mssql)\b'
-    nosql: '\b(?:nosql|mongodb|mongo|dynamodb|cassandra|redis|elasticsearch)\b'
-    data_structures: '\b(?:data\s*structures?|algorithms?|algorithm\s*design|optimization)\b'
-    algorithms: '\b(?:algorithms?|algorithm\s*design|computational|complexity|optimization)\b'
-    ci_cd: '\b(?:ci(?:/|_|\s+)?cd|continuous\s*(?:integration|deployment|delivery)|jenkins|circleci|github\s*actions|deployment|deploy(?:ing|ed)?)\b'
-    system_design: '\b(?:system\s*design|architecture|distributed\s*systems?|scalable\s*systems?|high\s*availability)\b'
-    nodejs: '\b(?:node(?:\.?js)?|nodejs|express(?:\.?js)?|npm)\b'
-    graphql: '\b(?:graphql|graph\s*ql|apollo)\b'
-    rest_apis: '\b(?:rest(?:ful)?\s*api(?:s)?|api\s*development|web\s*services?|restful|rest\s*endpoints?|rest\s*services?|rest\s*architecture|backend\s*apis?|developed\s+apis?|created\s+apis?|backend\s+development)\b'
-    aws: '\b(?:aws|amazon\s*web\s*services|ec2|s3|rds|lambda|cloudwatch|ecs|ecr)\b'
-    docker: '\b(?:docker|containerization|containers?)\b'
-    kubernetes: '\b(?:kubernetes|k8s|container\s*orchestration)\b'
-    react: '\b(?:react(?:\.?js)?|reactjs|react\s*native)\b'
-    vuejs: '\b(?:vue(?:\.?js)?|vuejs|vuex)\b'
-    frontend_development: '\b(?:frontend|front[\s-]?end|front\s*end|web\s*development|ui\s*development|client[\s-]?side|user\s*interface|ui|ux|user\s*experience|web\s*frontend|web\s*front[\s-]?end|javascript\s*development|front\s*end\s*technologies|front\s*end\s*tech(?:nologies)?)\b(?:\s*(?:development|programming|coding|experience|engineer|developer|technologies|development|engineering|applications?|interfaces?|specialist|expert|professional))*'
-    web_development: '\b(?:web\s*development|web\s*application|website|webapp|web\s*app|web\s*developer|web\s*engineer|web\s*platform|web\s*technologies|full[\s-]?stack|web\s*stack|web\s*based|full\s*stack\s*(?:software|developer|engineer)|stack\s*software\s*(?:developer|engineer)|software\s*developer|software\s*engineer)\b(?:\s*(?:development|programming|coding|experience|engineer|developer|technologies|development|engineering|applications?|interfaces?|specialist|expert|professional))*'
-    state_management: '\b(?:state\s*management|redux|vuex|mobx|recoil|context\s*api|state\s*container|application\s*state|global\s*state|state\s*handling|functional\s*(?:and|&)\s*class\s*(?:based\s*)?components|component\s*state)\b'
+    linear_algebra: '\b(?:linear\s*algebra|matrices|vectors|mathematical|mathematics|math|quantitative|applied\s*math)\b'
+    probability: '\b(?:probability|statistics|statistical|stochastic|random|distribution|mathematical|mathematics|math|quantitative)\b'
+    tensorflow: '\b(?:tensorflow|tf|keras|deep\s*learning|neural\s*networks?)\b'
+    pytorch: '\b(?:pytorch|torch|deep\s*learning|neural\s*networks?)\b'
+    scikit_learn: '\b(?:scikit[\s-]?learn|sklearn|machine\s*learning|ml)\b'
+    pandas: '\b(?:pandas|pd|dataframe|data\s*analysis|data\s*manipulation)\b'
+    numpy: '\b(?:numpy|np|numerical|scientific\s*computing|array)\b'
+    deep_learning: '\b(?:deep\s*learning|dl|neural\s*networks?|cnn|rnn|lstm|transformer|bert)\b'
+    langchain: '\b(?:langchain|llm\s*tools?|llm\s*framework|large\s*language\s*model\s*tools?)\b'
+    docker: '\b(?:docker|containerization|containers?|container\s*orchestration)\b'
+    kubernetes: '\b(?:kubernetes|k8s|container\s*orchestration|orchestration|aks|eks|gke)\b'
+    mlflow: '\b(?:mlflow|ml\s*flow|machine\s*learning\s*workflow|model\s*tracking)\b'
+    databricks: '\b(?:databricks|spark|big\s*data|data\s*processing)\b'
+    mapreduce: '\b(?:map\s*reduce|hadoop|distributed\s*computing|big\s*data)\b'
+    streaming: '\b(?:streaming|real[\s-]time|kafka|kinesis|pub[\s-]sub|event[\s-]driven)\b'
 
   context:
     - 'developed'
@@ -79,6 +80,13 @@ analysis_patterns:
     - 'leading'
     - 'architecture'
     - 'solution'
+    - 'research'
+    - 'studied'
+    - 'published'
+    - 'paper'
+    - 'thesis'
+    - 'dissertation'
+    - 'academic'
 
 # Enhanced scoring configuration
 scoring_config:
@@ -104,7 +112,7 @@ scoring_config:
     experience_gap: 0.25
     primary_skill_gap: 0.15
 
-# Job role definitions
+# Job role definitions remain unchanged
 job_roles:
   "Data Scientist":
     role_type: technical
@@ -284,7 +292,7 @@ job_roles:
         git: ['git', 'github', 'gitlab', 'version control']
         ci_cd: ['ci/cd', 'continuous integration', 'continuous deployment', 'devops']
         
-  "DevOps Engineer":
+  "Site Reliability Engineer":
     role_type: technical
     education:
       minimum: "Bachelor's degree"
