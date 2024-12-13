@@ -6,6 +6,7 @@ from utils.pdf import PDFProcessor, DOCXProcessor
 from utils.matcher import JobMatcher
 from utils.llm import LLMAnalyzer
 from utils.report_generator import ReportGenerator
+from utils.schemas import AnalysisResult
 from typing import Dict
 from dotenv import load_dotenv
 from utils.logging_config import setup_logging
@@ -28,21 +29,21 @@ def load_config() -> Dict:
         logger.error(f"Failed to load configuration: {str(e)}")
         raise
 
-def display_results(analysis_results: Dict, rank: int = None):
+def display_results(analysis_results: AnalysisResult, rank: int = None):
     """Display analysis results in a structured format"""
     try:
-        # Ensure we have a valid dictionary
-        if not isinstance(analysis_results, dict):
+        # Ensure we have a valid AnalysisResult object
+        if not isinstance(analysis_results, AnalysisResult):
             logger.error("Invalid analysis results format")
             st.error("Invalid analysis results format")
-            st.json(analysis_results)
+            st.write(analysis_results)
             return
 
         # Add Download PDF section at the top
         st.markdown("### 📊 Analysis Report")
         try:
             report_gen = ReportGenerator()
-            pdf_bytes = report_gen.generate_report(analysis_results)
+            pdf_bytes = report_gen.generate_report(analysis_results.model_dump())  # Convert to dict
             key_suffix = f"_{rank}" if rank is not None else ""
             st.download_button(
                 label="📥 Download PDF Report",
@@ -54,23 +55,6 @@ def display_results(analysis_results: Dict, rank: int = None):
         except Exception as e:
             logger.error(f"Failed to generate PDF report: {str(e)}")
             st.error("Failed to generate PDF report. Please try again.")
-
-        # Validate required fields
-        required_fields = [
-            "recommendation", "technical_match_score", "key_findings",
-            "interview_questions", "concerns"
-        ]
-        missing_fields = [
-            field for field in required_fields if field not in analysis_results
-        ]
-        if missing_fields:
-            logger.error(f"Missing required fields in analysis results: {missing_fields}")
-            st.error(
-                "Missing required fields in analysis results: "
-                f"{', '.join(missing_fields)}"
-            )
-            st.json(analysis_results)
-            return
 
         # Display rank if provided
         if rank is not None:
@@ -84,7 +68,7 @@ def display_results(analysis_results: Dict, rank: int = None):
         recommendation_color = "#ffc107"  # Default warning yellow
 
         # Display recommendation with clear visual indicator
-        recommendation = analysis_results["recommendation"]
+        recommendation = analysis_results.recommendation.value  # Access enum value
         logger.info(f"Displaying results with recommendation: {recommendation}")
         
         if recommendation == "STRONG_MATCH":
@@ -100,7 +84,7 @@ def display_results(analysis_results: Dict, rank: int = None):
             st.warning("⚠️ Not a Match - Do Not Proceed")
 
         # Display match score with visual meter
-        score = analysis_results['technical_match_score']
+        score = analysis_results.technical_match_score
         st.markdown(
             f"""
             <div style='text-align: center; padding: 1.5rem;'>
@@ -120,10 +104,10 @@ def display_results(analysis_results: Dict, rank: int = None):
         )
 
         # Display key findings
-        if analysis_results["key_findings"]:
+        if analysis_results.key_findings:
             st.markdown("### 🎯 Key Findings")
             st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-            for finding in analysis_results["key_findings"]:
+            for finding in analysis_results.key_findings:
                 st.markdown(
                     "<div style='margin-bottom: 0.8rem; font-size: 1.1em;'>"
                     f"✓ {finding}</div>",
@@ -132,10 +116,10 @@ def display_results(analysis_results: Dict, rank: int = None):
             st.markdown("</div>", unsafe_allow_html=True)
 
         # Display interview questions
-        if analysis_results["interview_questions"]:
+        if analysis_results.interview_questions:
             st.markdown("### 💬 Suggested Interview Questions")
             st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-            for i, question in enumerate(analysis_results["interview_questions"], 1):
+            for i, question in enumerate(analysis_results.interview_questions, 1):
                 st.markdown(
                     f"""
                     <div style='margin-bottom: 1.2rem; padding: 0.8rem;
@@ -149,10 +133,10 @@ def display_results(analysis_results: Dict, rank: int = None):
             st.markdown("</div>", unsafe_allow_html=True)
 
         # Display concerns
-        if analysis_results["concerns"]:
+        if analysis_results.concerns:
             st.markdown("### ⚠️ Areas of Concern")
             st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-            for concern in analysis_results["concerns"]:
+            for concern in analysis_results.concerns:
                 st.markdown(
                     f"""
                     <div style='color: #dc3545; margin-bottom: 0.8rem; 
@@ -168,7 +152,7 @@ def display_results(analysis_results: Dict, rank: int = None):
         logger.error(f"Error displaying results: {str(e)}")
         st.error("Error displaying results")
         st.error(str(e))
-        st.json(analysis_results)  # Show raw results for debugging
+        st.write(analysis_results)  # Show raw results for debugging
 
 def home_page():
     """Display the enhanced home page"""
@@ -324,7 +308,7 @@ def evaluation_page():
         # Job role selection with emoji
         st.markdown("### 🎯 Select Job Role")
         selected_role = st.selectbox(
-            "",  # Empty label since we use markdown above
+            "Select Job Role",
             options=list(config['job_roles'].keys()),
             key="role_selector"
         )
@@ -333,7 +317,7 @@ def evaluation_page():
         # File upload section with emoji
         st.markdown("### 📎 Upload Resumes")
         uploaded_files = st.file_uploader(
-            "",  # Empty label since we use markdown above
+            "Upload Resumes",
             type=["pdf", "docx"],
             accept_multiple_files=True,
             help="Upload up to 5 resumes in PDF or DOCX format"
@@ -343,7 +327,7 @@ def evaluation_page():
             if len(uploaded_files) > 5:
                 logger.warning("User attempted to upload more than 5 resumes")
                 st.warning(
-                    "���️ Maximum 5 resumes allowed. Only the first 5 will be analyzed."
+                    "️ Maximum 5 resumes allowed. Only the first 5 will be analyzed."
                 )
                 uploaded_files = uploaded_files[:5]
             
@@ -402,7 +386,7 @@ def evaluation_page():
 
                         # Sort results by confidence score
                         all_results.sort(
-                            key=lambda x: x['results']['technical_match_score'],
+                            key=lambda x: x['results'].technical_match_score,
                             reverse=True
                         )
                         logger.info("Successfully analyzed all resumes")

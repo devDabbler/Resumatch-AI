@@ -1,3 +1,69 @@
+# Add this new section at the top of the file
+llm_config:
+  response_format:
+    schema: {
+      "technical_match_score": "integer between 0-100",
+      "recommendation": "one of: STRONG_MATCH, GOOD_MATCH, POTENTIAL_MATCH, NO_MATCH",
+      "skills_assessment": [
+        {
+          "skill": "skill name",
+          "proficiency": "one of: Expert, Advanced, Intermediate, Beginner",
+          "years": "years of experience (float)",
+          "context": "context from resume",
+          "confidence": "confidence score between 0-1",
+          "last_used": "YYYY-MM or Recent/Current"
+        }
+      ],
+      "interview_questions": [
+        {
+          "category": "string (Technical Implementation|Experience Translation|Skill Gaps)",
+          "question": "detailed multi-part question",
+          "context": "relevant context from resume"
+        }
+      ],
+      "technical_gaps": ["list of missing or weak skills"],
+      "key_findings": ["list of important observations"],
+      "concerns": ["list of potential issues"],
+      "confidence_score": "overall confidence in analysis (0-1)"
+    }
+  system_prompt: |
+    You are a technical resume analyzer. Your task is to analyze resumes and return ONLY a JSON response matching the provided schema. Do not include any other text or explanations.
+    
+    Important rules:
+    1. Return ONLY the JSON object
+    2. Do not include any explanatory text
+    3. Do not use markdown formatting
+    4. Ensure all JSON keys and values match the schema exactly
+    5. Use proper JSON formatting with double quotes for strings
+    6. Do not include trailing commas
+    7. Always include all required fields
+    8. Use null for missing optional values
+    9. Format numbers without quotes
+    10. Use proper boolean values (true/false) without quotes
+
+  user_prompt_template: |
+    Analyze this resume for {role} position:
+
+    Resume Text:
+    {resume_text}
+
+    Job Requirements:
+    - Required Skills: {required_skills}
+    - Preferred Skills: {preferred_skills}
+    - Minimum Experience: {min_years} years
+
+    {skills_context}
+    {experience_context}
+
+    Scoring Guidelines:
+    - Score range is 0-100
+    - Strong Match (95-100): Exceeds all requirements with extensive experience
+    - Good Match (80-94): Meets all required skills with good experience
+    - Potential Match (60-79): Meets most requirements but has some gaps
+    - No Match (0-59): Missing critical requirements or insufficient experience
+
+    Return ONLY a valid JSON object matching the schema. Do not include any other text.
+
 # Analysis patterns for matching
 analysis_patterns:
   experience:
@@ -16,8 +82,8 @@ analysis_patterns:
     - '(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[a-z]*\.?\s+(\d{4})'
   
   location_patterns:
-    us: '\b(?:US|USA|United\s+States|Dallas|TX|Texas|Boston|MA|Massachusetts|New\s+York|NY|California|CA|Seattle|WA|Washington|Chicago|IL|Illinois|Atlanta|GA|Georgia|San\s+Mateo|Minneapolis|MN|Minnesota|Saint\s+Paul|St\.\s*Paul)\b'
-    india: '\b(?:India|Indian|Bangalore|Mumbai|Delhi|Hyderabad|Chennai|Pune|Kolkata)\b'
+    us: '\b(?:US|USA|United\s+States|California|New\s+York|Texas|Washington)\b'
+    non_us: '\b(?:India|China|Europe|Asia|Africa)\b'
 
   skills:
     python: '\b(?:python|py3?|python[23]|pandas|numpy|scipy|scikit|pytorch|tensorflow)\b(?:\s*(?:development|programming|coding|experience|engineer|developer|skilled at|skilled|programming|coding|development|engineering|packages?|tools?|managers?))?'
@@ -40,6 +106,18 @@ analysis_patterns:
     databricks: '\b(?:databricks|spark|big\s*data|data\s*processing)\b'
     mapreduce: '\b(?:map\s*reduce|hadoop|distributed\s*computing|big\s*data)\b'
     streaming: '\b(?:streaming|real[\s-]time|kafka|kinesis|pub[\s-]sub|event[\s-]driven)\b'
+    # Frontend patterns
+    javascript: '\b(?:javascript|js|ecmascript|es6|es2015|es2016|es2017|es2018|es2019|es2020|vanilla\s*js|js\s*development)\b'
+    frontend_development: '\b(?:frontend|front[\s-]end|ui|user\s*interface|client[\s-]side|web\s*frontend|browser|dom|html|css|sass|less|responsive|mobile[\s-]first|progressive\s*web\s*app|pwa|web\s*components)\b'
+    react: '\b(?:react(?:\.js)?|reactjs|react\s*native|react\s*hooks|react\s*router|react\s*redux|jsx|tsx)\b'
+    web_development: '\b(?:web\s*development|web\s*developer|web\s*engineer|web\s*application|webapp|web\s*app|website|full[\s-]stack|fullstack)\b'
+    state_management: '\b(?:redux|vuex|state|flux|context|mobx|recoil|zustand|state\s*(?:management|container|architecture|patterns|machine|flow|handling))\b'
+    rest_apis: '\b(?:rest(?:ful)?(?:\s*api)?s?|api\s*(?:development|design|architecture|integration|implementation)|web\s*services|http\s*apis|json\s*apis|microservices)\b'
+    ci_cd: '\b(?:ci/cd|continuous\s*(?:integration|deployment|delivery)|devops|build\s*pipeline|deployment\s*pipeline|jenkins|gitlab\s*ci|github\s*actions|azure\s*pipelines)\b'
+    typescript: '\b(?:typescript|ts|typed\s*javascript|type\s*system|type\s*safety)\b'
+    vue: '\b(?:vue(?:\.js)?|vuejs|vue\s*router|vuex|vue\s*cli|vue\s*components)\b'
+    node: '\b(?:node(?:\.js)?|nodejs|npm|express(?:\.js)?|nest(?:\.js)?)\b'
+    graphql: '\b(?:graphql|graph\s*ql|apollo|prisma|hasura)\b'
 
   context:
     - 'developed'
@@ -90,308 +168,353 @@ analysis_patterns:
 
 # Enhanced scoring configuration
 scoring_config:
-  weights:
-    technical:
-      skills: 0.40
-      platform_specific_experience: 0.15 
-      experience: 0.35
-      role_relevance: 0.10
-
-  thresholds:
-    strong_match: 85
-    good_match: 70
-    potential_match: 50
-    minimum_match: 30
-
-  skill_weights:
-    required: 0.75
-    preferred: 0.25
+  experience_weights:
+    us_experience: 1.0
+    non_us_experience: 0.6
+    professional_multiplier: 1.0
+    academic_multiplier: 0.4
+    internship_multiplier: 0.2
     
-  penalties:
-    missing_required: 0.20
-    experience_gap: 0.25
-    primary_skill_gap: 0.15
+  context_weights:
+    enterprise: 1.0
+    research: 0.4
+    academic: 0.3
+    
+  skill_context_multipliers:
+    production: 1.0
+    enterprise: 0.9
+    research: 0.4
+    academic: 0.3
+    
+  location_patterns:
+    us: '\b(?:US|USA|United\s+States|California|New\s+York|Texas|Washington)\b'
+    non_us: '\b(?:India|China|Europe|Asia|Africa)\b'
+    
+  experience_patterns:
+    professional: 
+      - 'years?\s+(?:of)?\s+(?:professional|industry|work)\s+experience'
+      - 'senior|lead|principal|architect'
+    academic:
+      - 'research|thesis|dissertation|phd|postdoc'
+      - 'teaching\s+assistant|research\s+assistant'
+    internship:
+      - 'intern|internship|summer|co-op'
 
 # Job role definitions remain unchanged
 job_roles:
   "Data Scientist":
     role_type: technical
-    education:
-      minimum: "Bachelor's degree"
-      preferred: "Master's or Doctoral degree"
-      fields:
-        - "Computer Science"
-        - "Electrical Engineering"
-        - "Statistics"
-        - "Related fields"
-    scoring_weights: technical
     min_years_experience: 5
     scoring_constraints:
       max_score: 100
-      required_skills_threshold: 0.70
-      minimum_skills_match: 0.60
-    required_skills:
-      - Python
-      - Machine Learning
-      - Statistics
-      - Data Visualization
-      - Git
-      - "Linear Algebra OR Probability"
-    preferred_skills:
-      - TensorFlow
-      - PyTorch
-      - Scikit-learn
-      - Pandas
-      - NumPy
-      - Deep Learning
-      - LangChain
-      - Docker
-      - Kubernetes
-      - MLflow
-      - Databricks
-      - MapReduce
-      - Streaming Technology
-    skill_weights:
-      core_ml: 0.30
-      math: 0.25
-      data_tools: 0.25
-      devops: 0.20
-    skill_groups:
-      core_ml:
-        - Machine Learning
-        - Deep Learning
-        - TensorFlow
-        - PyTorch
-      math:
-        - Statistics
-        - Linear Algebra
-        - Probability
-      data_tools:
-        - Python
-        - Pandas
-        - NumPy
-        - Data Visualization
-      devops:
-        - Git
-        - Docker
-        - Kubernetes
-    key_responsibilities:
-      - Collaborate with internal and external teams
-      - Develop and test machine learning models
-      - Deploy and optimize ML solutions
-      - Create application specifications and documentation
-      - Troubleshoot performance issues
-      - Transform data into business intelligence
-    soft_skills:
-      - Strong verbal communication
-      - Strong written communication
-      - Self-driven
-      - Project leadership
-      - Independent work capability
-      - Team collaboration
+      required_skills_threshold: 0.7
+      experience_weight: 0.4
+      skills_weight: 0.3
+      location_weight: 0.2
+      context_weight: 0.1
+      
+    required_skills: [
+      "Python",
+      "Machine Learning",
+      "Statistics",
+      "Data Visualization",
+      "Git"
+    ]
+    
+    preferred_skills: [
+      "Deep Learning",
+      "MLOps",
+      "Cloud Platforms",
+      "Spark",
+      "Docker"
+    ]
 
-  "Software Development Engineer, C3":
-      role_type: technical
-      education:
-        minimum: "Bachelor's degree"
-        fields:
-          - "Computer Science"
-          - "Related fields"
-          - "Equivalent combination of education and experience"
-      scoring_weights: technical
-      min_years_experience: 5
-      scoring_constraints:
-        max_score: 100
-        required_skills_threshold: 0.60
-        minimum_skills_match: 0.50
-        experience_weight: 0.30
-        primary_skill_group: "frontend"  # Added to indicate primary skill focus
-        primary_skill_weight: 0.65       # Weight for primary skill group
-        experience_penalty: 0.25         # Penalty for not meeting min years
-        skill_group_penalty: 0.15        # Penalty for weak primary skill group
-      required_skills:
-        - JavaScript
-        - React
-        - Frontend Development
-        - Web Development
-        - Git
-        - REST APIs
-        - State Management
-        - CI/CD
-      preferred_skills:
-        - TypeScript
-        - Vue.js
-        - Angular
-        - Node.js
-        - GraphQL
-        - AWS
-        - Docker
-        - Kubernetes
-      skill_groups:
-        frontend:  # Primary skill group for this role
-          - JavaScript
-          - React
-          - Redux
-          - Vue.js
-          - Angular
-          - TypeScript
-          - Frontend Development
-          - Web Development
-        architecture:
-          - System Design
-          - REST APIs
-          - Microservices
-          - GraphQL
-        devops:
-          - Git
-          - GitLab
-          - CI/CD
-          - AWS
-          - Azure
-        data:
-          - SQL
-          - NoSQL
-          - ETL
-      experience_levels:
-        junior: [0, 3]
-        mid: [3, 5]
-        senior: [5, null]
-      skill_variations:
-        # Frontend variations
-        frontend_development: [
-          'frontend', 'front-end', 'front end',
-          'frontend developer', 'front-end developer', 'front end developer',
-          'frontend development', 'front-end development', 'front end development',
-          'frontend engineer', 'front-end engineer', 'front end engineer',
-          'ui development', 'ui developer', 'user interface',
-          'client-side', 'client side'
-        ]
-        
-        web_development: [
-          'web development', 'web developer', 'web engineer',
-          'web application', 'webapp', 'web app',
-          'website development', 'web platform',
-          'web technologies', 'web stack'
-        ]
-        
-        rest_apis: [
-          'rest', 'restful', 'rest api', 'restful api', 
-          'rest apis', 'restful apis', 'rest services',
-          'rest architecture', 'restful services',
-          'restful web services', 'rest endpoints',
-          'api development', 'api', 'apis'
-        ]
+    skill_requirements:
+      Python:
+        min_years: 3
+        context: "production"
+      "Machine Learning":
+        min_years: 3
+        context: "enterprise"
+      # Other skill requirements...
 
-        # Other variations unchanged but included for completeness
-        javascript: ['javascript', 'js', 'ecmascript', 'es6']
-        react: ['react', 'reactjs', 'react.js', 'react native']
-        state_management: ['redux', 'vuex', 'state', 'flux', 'context', 'state management']
-        typescript: ['typescript', 'ts', 'typed javascript']
-        vue: ['vue', 'vuejs', 'vue.js']
-        angular: ['angular', 'ng', 'angular.js', 'angularjs']
-        git: ['git', 'github', 'gitlab', 'version control']
-        ci_cd: ['ci/cd', 'continuous integration', 'continuous deployment', 'devops']
-        
-  "Site Reliability Engineer":
+  "Software Development Engineer":
     role_type: technical
-    education:
-      minimum: "Bachelor's degree"
-      fields:
-        - "Computer Science"
-        - "Information Technology"
-        - "Related fields"
-        - "Equivalent combination of education and experience"
-    scoring_weights: technical
-    min_years_experience: 3
-    scoring_constraints:
-      max_score: 100
-      required_skills_threshold: 0.60
-      minimum_skills_match: 0.50
-    required_skills:
-      - Linux
-      - Python OR Ruby
-      - AWS OR GCP OR Azure
-      - Kubernetes
-      - CI/CD
-      - Infrastructure as Code
-      - Networking
-      - Database Management
-      - NoSQL
-      - Cassandra
-      - Ansible OR Terraform
-    preferred_skills:
-      - Docker
-      - Jenkins
-      - GitOps
-      - CI/CD
-      - Prometheus
-      - Grafana
-      - ELK Stack
-      - Istio
-      - Groovy
-      - Bash
-      - CloudFormation
-    skill_weights:
-      infrastructure: 0.30
-      cloud_platforms: 0.25
-      automation: 0.25
-      monitoring: 0.20
-    skill_groups:
-      infrastructure:
-        - Linux
-        - Kubernetes
-        - Docker
-        - Networking
-        - Database Management
-      cloud_platforms:
-        - AWS
-        - GCP
-        - Azure
-      automation:
-        - Python
-        - Ruby
-        - Ansible
-        - Terraform
-        - CI/CD
-      monitoring:
-        - Prometheus
-        - Grafana
-        - ELK Stack
-    key_responsibilities:
-      - "Ensure maximum system uptime and availability"
-      - "Implement end-to-end monitoring and alerting"
-      - "Resolve complex technical issues"
-      - "Develop resilient system architectures"
-      - "Lead automation initiatives"
-      - "Design and configure infrastructure"
-      - "Collaborate with Services and Engineering teams"
-    soft_skills:
-      - "Problem-solving abilities"
-      - "Critical thinking"
-      - "Strong communication"
-      - "Cross-functional collaboration"
-      - "System administration"
-      - "DevOps practices"
-
-  "Generative AI Architect":
-    role_type: technical
-    scoring_weights: technical
-    min_years_experience: 8
+    min_years_experience: 5
     scoring_constraints:
       max_score: 100
       required_skills_threshold: 0.7
+      experience_weight: 0.4
+      skills_weight: 0.3
+      location_weight: 0.2
+      context_weight: 0.1
+      
+    skill_context_requirements:
+      production_code: 0.7
+      enterprise_systems: 0.6
+      
     required_skills:
-      - MLOps
-      - AI Architecture
-      - Containerization
-      - Model Optimization
-      - Python
-      - Cloud Platforms (GCP, AWS, Azure)
-    preferred_skills:
-      - OpenAI API
-      - TensorFlow
-      - PyTorch
-      - RLHF
-      - Data Science
-      - ETL Pipeline Management
-      - Kubernetes
+      - name: "JavaScript"
+        min_years: 3
+        context: "production"
+      - name: "React"
+        min_years: 2
+        context: "enterprise"
+      # Add other skills similarly
+
+# Add skill variations configuration section
+skill_variations:
+  python:
+    aliases: ['py', 'python3', 'python2', 'pythonic', 'pandas', 'sklearn']
+    forms: ['programming', 'development', 'scripting']
+  javascript:
+    aliases: ['js', 'ecmascript', 'node.js', 'nodejs']
+    forms: ['frontend', 'development']
+  machine_learning:
+    aliases: [
+      'ml', 'machine-learning', 'ml/ai', 'ai/ml', 
+      'llm', 'llms', 'llm tuning', 'deep learning',
+      'neural networks', 'ai', 'artificial intelligence'
+    ]
+    forms: ['algorithms', 'models', 'systems']
+  artificial_intelligence:
+    aliases: ['ai', 'artificial-intelligence']
+    forms: ['deep learning', 'neural networks']
+  statistics:
+    aliases: [
+      'statistical', 'stats', 'stat', 'statistical analysis',
+      'physics', 'mathematical physics', 'quantitative analysis'
+    ]
+    forms: ['analysis', 'modeling', 'inference']
+  data_visualization:
+    aliases: [
+      'data viz', 'dataviz', 'data-viz', 'visualization',
+      'charts', 'graphs', 'plotting', 'matplotlib'
+    ]
+    forms: ['charts', 'graphs', 'dashboards']
+  git:
+    aliases: ['github', 'gitlab', 'version control', 'source control']
+    forms: ['repository', 'versioning']
+  sql:
+    aliases: ['mysql', 'postgresql', 'tsql', 'plsql', 'database']
+    forms: ['querying', 'databases']
+  deep_learning:
+    aliases: [
+      'dl', 'deep-learning', 'neural networks',
+      'llm', 'llms', 'transformer', 'transformers'
+    ]
+    forms: ['models', 'architectures']
+  tensorflow:
+    aliases: ['tf', 'tensorflow2', 'tf.keras']
+    forms: ['framework', 'library']
+  pytorch:
+    aliases: ['torch', 'pytorch', 'deep learning framework']
+    forms: ['framework', 'library']
+  nlp:
+    aliases: ['natural language processing', 'text analytics', 'text mining']
+    forms: ['processing', 'understanding']
+  data_analysis:
+    aliases: ['data analytics', 'data analyst', 'data science']
+    forms: ['analysis', 'insights']
+  aws:
+    aliases: ['amazon web services', 'amazon aws', 'cloud']
+    forms: ['services', 'platform']
+  docker:
+    aliases: ['containerization', 'containers']
+    forms: ['deployment', 'packaging']
+  kubernetes:
+    aliases: ['k8s', 'container orchestration']
+    forms: ['orchestration', 'deployment']
+  ci_cd:
+    aliases: ['continuous integration', 'continuous deployment', 'devops']
+    forms: ['pipeline', 'automation']
+  api:
+    aliases: ['rest api', 'restful', 'web services']
+    forms: ['endpoints', 'services']
+  linux:
+    aliases: ['unix', 'bash', 'shell scripting']
+    forms: ['operating system', 'environment']
+  linear_algebra:
+    aliases: [
+      'linear algebra', 'matrices', 'vectors', 'mathematical physics',
+      'physics', 'quantum mechanics'
+    ]
+    forms: ['analysis', 'computation']
+  probability:
+    aliases: [
+      'probabilistic', 'stochastic', 'statistical physics',
+      'physics', 'quantum mechanics'
+    ]
+    forms: ['theory', 'modeling']
+  scikit_learn:
+    aliases: ['sklearn', 'scikit-learn', 'scikit']
+    forms: ['ml library', 'machine learning library']
+
+# Add tech stack groupings
+tech_stacks:
+  frontend:
+    parent: "JavaScript"
+    children: [
+      "React", "Vue", "Angular",
+      "HTML5", "CSS3", "TypeScript",
+      "Redux", "Webpack", "Babel"
+    ]
+  backend:
+    parent: "Python"
+    children: [
+      "Django", "Flask", "FastAPI",
+      "SQLAlchemy", "Celery", "uWSGI"
+    ]
+  ml_stack:
+    parent: "Machine Learning"
+    children: [
+      "TensorFlow", "PyTorch", "Scikit-learn",
+      "Pandas", "NumPy", "Keras"
+    ]
+
+# Add quality check patterns
+quality_checks:
+  typos:
+    penalty: 0.1  # 10% penalty per typo
+    max_penalty: 0.3  # Cap at 30% total penalty
+    patterns:
+      - '[A-Z][A-Z]+[a-z]'  # Incorrect capitalization
+      - '\s[a-z](?=\s|\.)'  # Uncapitalized words
+      - '[\.,]\w'  # Missing space after punctuation
+      - '\s+[\.,]'  # Space before punctuation
+      - '([A-Za-z])\1{2,}'  # Repeated characters
+
+  grammar:
+    penalty: 0.15
+    max_penalty: 0.4
+    patterns:
+      - 'i\s+(?![A-Z])'  # Uncapitalized "I"
+      - '\s+(is|are|was|were)\s+been\s'
+      - '\s+have\s+had\s+been\s'
+
+# Add context patterns for tech usage
+tech_context_patterns:
+  implementation: [
+    'implemented using {tech}',
+    'built with {tech}',
+    'developed in {tech}',
+    'using {tech} to'
+  ]
+  architecture: [
+    'architected {tech}',
+    'designed {tech}',
+    '{tech} architecture'
+  ]
+  optimization: [
+    'optimized {tech}',
+    'improved {tech}',
+    'enhanced {tech}'
+  ]
+  integration: [
+    'integrated {tech}',
+    'connected {tech}',
+    '{tech} integration'
+  ]
+
+# Update interview questions templates
+interview_questions:
+  # Context-based technical questions
+  technical_depth: [
+    "In your {project}, you used {tech} for {context}. Can you elaborate on:
+     - The specific challenges you faced
+     - Your implementation approach
+     - How you measured success?",
+    "Your experience with {tech} seems focused on {context}. How did you handle:
+     - Performance optimization
+     - Error handling
+     - Testing strategy?",
+    "I see you used {tech} with {related_tech}. Could you explain:
+     - Why you chose this combination
+     - Integration challenges
+     - Lessons learned?"
+  ]
+
+  # Architecture/design questions
+  system_design: [
+    "For your {project} project that used {tech}:
+     - What were the key architectural decisions?
+     - How did you handle scalability?
+     - What would you do differently now?",
+    "When implementing {feature} with {tech}:
+     - How did you structure the solution?
+     - What alternatives did you consider?
+     - How did you validate your approach?"
+  ]
+
+  # Impact/results questions
+  business_impact: [
+    "Your work on {project} using {tech} seems interesting:
+     - What business metrics did it improve?
+     - How did you measure success?
+     - What was the long-term impact?",
+    "In your role at {company}, you led {feature} development:
+     - What was the business driver?
+     - How did you prioritize requirements?
+     - What was the ROI?"
+  ]
+
+  # Gap exploration
+  gap_assessment: [
+    "While you have strong {tech} skills, I notice less experience with {missing_tech}:
+     - Have you had any exposure to it?
+     - How would you approach learning it?
+     - What similar technologies have you used?",
+    "Your {tech} experience seems primarily in {context} rather than {required_context}:
+     - How would you adapt your skills?
+     - What challenges do you anticipate?
+     - How would you bridge this gap?"
+  ]
+
+  # Quality concerns
+  quality_focus: [
+    "Regarding {quality_issue} in your experience with {tech}:
+     - How do you ensure code quality?
+     - What's your testing approach?
+     - How do you handle code reviews?",
+    "I notice {issue_type} in your description of {project}:
+     - What's your attention to detail strategy?
+     - How do you validate your work?
+     - What tools do you use for quality?"
+  ]
+
+analysis_patterns:
+  project_patterns:
+    - role: '(?:led|managed|developed|architected)\s+([^.]+)'
+    - impact: '(?:improved|increased|reduced|optimized)\s+([^.]+)\s+by\s+(\d+)%'
+    - scale: 'handling\s+(\d+(?:K|M|B)?)\s+(?:users|requests|transactions)'
+    
+  tech_usage_patterns:
+    implementation:
+      - 'using\s+({tech})\s+(?:to|for)\s+([^.]+)'
+      - 'implemented\s+([^.]+)\s+with\s+({tech})'
+    architecture:
+      - 'designed\s+([^.]+)\s+using\s+({tech})'
+      - 'architected\s+([^.]+)\s+with\s+({tech})'
+    optimization:
+      - 'optimized\s+([^.]+)\s+using\s+({tech})'
+      - 'improved\s+([^.]+)\s+with\s+({tech})'
+
+  skill_gap_analysis:
+    critical_gaps:
+      - missing_core: "Missing core skill {skill} required for {role}"
+      - version_mismatch: "Experience with older version of {tech}"
+      - context_mismatch: "Used {tech} in {context} but need {required_context}"
+    potential_gaps:
+      - depth: "Limited depth in {skill} for {requirement}"
+      - recency: "No recent experience with {tech} (last used: {last_used})"
+      - scale: "Experience scale mismatch for {tech} ({current} vs {required})"
+
+  insight_patterns:
+    strengths:
+      - leadership: 'led\s+team\s+of\s+(\d+)'
+      - impact: 'reduced\s+(\w+)\s+by\s+(\d+)%'
+      - innovation: 'designed\s+new\s+(\w+)'
+    weaknesses:
+      - job_hopping: 'average_tenure < 1.5 years'
+      - skill_decay: 'no_recent_usage > 2 years'
+      - context_mismatch: 'academic_vs_industry'

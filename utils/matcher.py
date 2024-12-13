@@ -1,9 +1,11 @@
 from utils.logging_config import setup_logging
 import yaml
 import regex as re
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional, Tuple
 import logging
 from datetime import datetime
+import math
+import traceback
 
 # Initialize logging configuration
 setup_logging()
@@ -25,15 +27,7 @@ class JobMatcher:
             }
             
             # Initialize skill variations map
-            self.skill_variations = {
-                'machine_learning': ['ml', 'machine learning', 'deep learning', 'neural networks', 'ai', 'artificial intelligence'],
-                'deep_learning': ['dl', 'deep learning', 'neural networks', 'cnn', 'rnn', 'lstm', 'transformer'],
-                'data_visualization': ['data viz', 'visualization', 'tableau', 'powerbi', 'matplotlib', 'seaborn', 'plotly', 'charts'],
-                'big_data': ['hadoop', 'spark', 'distributed computing', 'data pipeline', 'etl', 'data engineering'],
-                'statistics': ['statistical', 'stats', 'probability', 'regression', 'hypothesis testing', 'statistical analysis'],
-                'time_series_regression': ['time series', 'temporal', 'forecasting', 'arima', 'sarima', 'prophet', 'time series analysis'],
-                'python': ['py', 'python3', 'python2', 'pandas', 'numpy', 'scipy', 'scikit']
-            }
+            self.skill_variations = self.config.get('skill_variations', {})
             
             self.scoring_config = self.config.get('scoring_config', {})
 
@@ -42,342 +36,506 @@ class JobMatcher:
             raise
 
     def extract_experience(self, text: str) -> Dict[str, Any]:
-        """Extract experience details using comprehensive patterns."""
-        matches = []
-        years = set()
-        logger.info("Starting experience extraction")
-
-        # Enhanced experience patterns
-        experience_patterns = [
-            r'(\d+)\+?\s*(?:years?|yrs?)(?:\s+(?:of\s+)?(?:experience|work|research))?',  # "5+ years experience"
-            r'(?:over|more\s+than)\s+(\d+)\s*(?:years?|yrs?)',  # "over 5 years"
-            r'(?:experience|work|research).*?(\d+)\+?\s*(?:years?|yrs?)',  # "experience of 5 years"
-            r'(\d+)\+?\s*(?:years?|yrs?).*?(?:experience|work|research)',  # "5 years of experience"
-            r'career\s+spanning\s+(\d+)\+?\s*(?:years?|yrs?)',  # "career spanning 5 years"
-            r'(?:since|from)\s+(\d{4})',  # "since 2015"
-        ]
-
-        # First try to extract explicit year mentions
-        for pattern in experience_patterns:
-            found = re.finditer(pattern, text, re.IGNORECASE)
-            for match in found:
-                match_text = match.group(0)
-                matches.append(match_text)
-                try:
-                    # Extract year value
-                    year_val = int(match.group(1))
-                    if "since" in match_text.lower() or "from" in match_text.lower():
-                        current_year = datetime.now().year
-                        year_val = current_year - year_val
-                    if year_val <= 50:  # Sanity check for reasonable years
-                        years.add(year_val)
-                except (ValueError, IndexError) as e:
-                    logger.warning(f"Error parsing years: {e}")
-
-        # Enhanced date range detection
-        date_pattern = r'(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[a-z]*\.?\s+(\d{4})'
-        date_matches = list(re.finditer(date_pattern, text, re.IGNORECASE))
-        
-        if date_matches:
-            dates = [int(m.group(1)) for m in date_matches]
-            current_year = datetime.now().year
+        """Extract experience details with enhanced context awareness."""
+        try:
+            matches = []
+            years = set()
+            dates = []
             
-            # Handle "Present" or "Current"
-            if any(word in text for word in ["Present", "Current", "Now"]):
-                dates.append(current_year)
+            # Extract date ranges with improved context
+            date_pattern = r'(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[a-z]*\.?\s+(\d{4})'
+            date_matches = list(re.finditer(date_pattern, text, re.IGNORECASE))
             
-            if dates:
-                # Sort dates to find distinct periods
-                dates = sorted(set(dates))
-                total_years = 0
+            if date_matches:
+                dates = [int(m.group(1)) for m in date_matches]
+                current_year = datetime.now().year
                 
-                # Calculate years for each period
-                for i in range(0, len(dates)-1, 2):
-                    start = dates[i]
-                    end = dates[i+1] if i+1 < len(dates) else current_year
-                    period_years = end - start
-                    if period_years > 0 and period_years < 50:  # Sanity check
-                        total_years += period_years
-                        years.add(period_years)
+                # Handle "Present" or "Current"
+                if any(word in text for word in ["Present", "Current", "Now"]):
+                    dates.append(current_year)
+                
+                if dates:
+                    dates = sorted(set(dates))
+                    if len(dates) >= 2:
+                        total_years = dates[-1] - dates[0]
+                        if total_years > 0 and total_years < 50:
+                            years.add(total_years)
 
-        # Calculate total years, including research experience
-        total_years = max(years) if years else 0
-        
-        # Add bonus for research experience and advanced degrees
-        if re.search(r'(?:research|phd|master|thesis|dissertation)', text, re.IGNORECASE):
-            research_bonus = 2  # Add 2 years equivalent for research/advanced degree
-            total_years = min(total_years + research_bonus, total_years * 1.5)  # Cap at 50% increase
+            # Extract explicit year mentions with context
+            for pattern in self.patterns['experience']:
+                found = re.finditer(pattern, text, re.IGNORECASE)
+                for match in found:
+                    match_text = match.group(0)
+                    context = self._extract_context(text, match.start(), 100)
+                    matches.append({
+                        'text': match_text,
+                        'context': context
+                    })
+                    try:
+                        year_val = int(match.group(1))
+                        if year_val <= 50:
+                            years.add(year_val)
+                    except (ValueError, IndexError):
+                        continue
+
+            # Calculate total experience with education consideration
+            total_years = max(years) if years else 0
+            if not total_years and dates:
+                total_years = dates[-1] - dates[0] if len(dates) >= 2 else 0
+
+            # Add research/education experience bonus with reduced weight
+            education_bonus = self._calculate_education_bonus(text)
+            if education_bonus > 0:
+                # Apply academic multiplier from config
+                academic_multiplier = self.scoring_config['experience_weights'].get('academic_multiplier', 0.4)
+                total_years = total_years + (education_bonus * academic_multiplier)
+
+            return {
+                'matches': matches,
+                'years': total_years,
+                'all_years': sorted(list(years)),
+                'education_bonus': education_bonus,
+                'date_ranges': dates
+            }
             
-        result = {
-            'matches': matches,
-            'years': total_years,
-            'all_years': sorted(list(years))
-        }
-        logger.info(f"Extracted experience: {result}")
-        return result
+        except Exception as e:
+            logger.error(f"Experience extraction failed: {str(e)}")
+            return {'matches': [], 'years': 0, 'all_years': [], 'education_bonus': 0}
 
     def match_skills(self, text: str, role_name: str) -> Dict[str, Any]:
-        """Match required and preferred skills with context analysis."""
-        role_config = self.config.get('job_roles', {}).get(role_name)
-        if not role_config:
-            logger.error(f"Role {role_name} not found in configuration")
-            return {'required': [], 'preferred': [], 'context': {}}
-        
-        matches = {
-            'required': [],
-            'preferred': [],
-            'context': {}
-        }
-
-        # Match required skills with OR logic support
-        for skill in role_config.get('required_skills', []):
-            if ' OR ' in skill:
-                # Handle OR conditions
-                alternatives = [s.strip() for s in skill.split(' OR ')]
-                for alt in alternatives:
-                    result = self.check_skill(alt, text)
-                    if result['matched']:
-                        matches['required'].append(skill)
-                        matches['context'][skill] = result['context']
-                        break
-            else:
-                result = self.check_skill(skill, text)
-                if result['matched']:
-                    matches['required'].append(skill)
-                    matches['context'][skill] = result['context']
-
-        # Match preferred skills
-        for skill in role_config.get('preferred_skills', []):
-            result = self.check_skill(skill, text)
-            if result['matched']:
-                matches['preferred'].append(skill)
-                matches['context'][skill] = result['context']
-
-        return matches
-
-    def check_skill(self, skill: str, text: str) -> Dict[str, Any]:
-        """Check for skill presence with context validation."""
-        skill_lower = skill.lower().replace(' ', '_')
-        
+        """Match skills with enhanced context analysis."""
         try:
-            # Get pattern from config or create one
-            if skill_lower in self.patterns['skills']:
-                pattern = self.patterns['skills'][skill_lower]
+            # Case-insensitive role name matching
+            role_config = None
+            for config_role_name, config in self.config.get('job_roles', {}).items():
+                if config_role_name.lower() == role_name.lower():
+                    role_config = config
+                    break
+                    
+            if not role_config:
+                available_roles = list(self.config.get('job_roles', {}).keys())
+                logger.error(f"Role '{role_name}' not found in configuration. Available roles: {available_roles}")
+                return {'required': [], 'preferred': [], 'context': {}}
+            
+            matches = {
+                'required': [],
+                'preferred': [],
+                'context': {},
+                'skill_details': []
+            }
+
+            text_lower = text.lower()
+            
+            # Process required skills
+            required_skills = role_config.get('required_skills', [])
+            for skill in required_skills:
+                skill_name = skill if isinstance(skill, str) else skill.get('name')
+                skill_match = self._analyze_skill(skill_name, text_lower, text)
+                if skill_match['matched']:
+                    matches['required'].append(skill_name)
+                    matches['context'][skill_name] = skill_match['context']
+                    matches['skill_details'].append({
+                        'skill': skill_name,
+                        'type': 'required',
+                        'context': skill_match['context'],
+                        'confidence': skill_match['confidence']
+                    })
+
+            # Process preferred skills
+            for skill in role_config.get('preferred_skills', []):
+                skill_match = self._analyze_skill(skill, text_lower, text)
+                if skill_match['matched']:
+                    matches['preferred'].append(skill)
+                    matches['context'][skill] = skill_match['context']
+                    matches['skill_details'].append({
+                        'skill': skill,
+                        'type': 'preferred',
+                        'context': skill_match['context'],
+                        'confidence': skill_match['confidence']
+                    })
+
+            # Add skill group analysis
+            matches['group_analysis'] = self._analyze_skill_groups(
+                matches['skill_details'],
+                role_config.get('skill_groups', {})
+            )
+
+            logger.info(f"Matched required skills: {len(matches['required'])}/{len(role_config.get('required_skills', []))}")
+            logger.info(f"Matched preferred skills: {len(matches['preferred'])}/{len(role_config.get('preferred_skills', []))}")
+            
+            return matches
+            
+        except Exception as e:
+            logger.error(f"Skills matching failed: {str(e)}")
+            return {'required': [], 'preferred': [], 'context': {}}
+
+    def _analyze_skill(self, skill: str, text_lower: str, original_text: str) -> Dict[str, Any]:
+        """Analyze a single skill with enhanced context awareness."""
+        try:
+            variations = self._get_skill_variations(skill)
+            best_match = None
+            highest_confidence = 0
+            
+            for variation in variations:
+                pattern = fr'\b{re.escape(variation)}\b'
+                matches = list(re.finditer(pattern, text_lower))
+                
+                for match in matches:
+                    context = self._extract_context(original_text, match.start(), 150)
+                    confidence = self._calculate_skill_confidence(context, variation)
+                    
+                    if confidence > highest_confidence:
+                        best_match = {
+                            'matched': True,
+                            'skill': skill,
+                            'variation': variation,
+                            'context': context,
+                            'confidence': confidence
+                        }
+                        highest_confidence = confidence
+
+            return best_match if best_match else {
+                'matched': False,
+                'skill': skill,
+                'context': "",
+                'confidence': 0.0
+            }
+            
+        except Exception as e:
+            logger.error(f"Skill analysis failed for {skill}: {str(e)}")
+            return {
+                'matched': False,
+                'skill': skill,
+                'context': "",
+                'confidence': 0.0
+            }
+
+    def _calculate_skill_confidence(self, context: str, skill: str) -> float:
+        """Calculate confidence score for skill match based on context."""
+        try:
+            confidence = 0.7  # Base confidence for regex match
+            
+            # Check for strong indicators
+            strong_indicators = [
+                'developed', 'implemented', 'architected', 'designed',
+                'led', 'managed', 'expertise in', 'specialized in'
+            ]
+            
+            # Check for moderate indicators
+            moderate_indicators = [
+                'used', 'worked with', 'familiar with', 'experience in',
+                'knowledge of', 'skilled in'
+            ]
+            
+            # Check for weak indicators
+            weak_indicators = [
+                'learning', 'basic', 'fundamental', 'exposure to'
+            ]
+            
+            context_lower = context.lower()
+            
+            # Adjust confidence based on indicators
+            for indicator in strong_indicators:
+                if indicator in context_lower:
+                    confidence = min(1.0, confidence + 0.2)
+                    
+            for indicator in moderate_indicators:
+                if indicator in context_lower:
+                    confidence = min(1.0, confidence + 0.1)
+                    
+            for indicator in weak_indicators:
+                if indicator in context_lower:
+                    confidence = max(0.3, confidence - 0.2)
+            
+            return round(confidence, 2)
+            
+        except Exception as e:
+            logger.error(f"Confidence calculation failed: {str(e)}")
+            return 0.7  # Return base confidence on error
+
+    def _extract_context(self, text: str, position: int, window_size: int) -> str:
+        """Extract context around a position with improved formatting."""
+        try:
+            start = max(0, position - window_size)
+            end = min(len(text), position + window_size)
+            
+            # Get context window
+            context = text[start:end].strip()
+            
+            # Clean up context
+            context = re.sub(r'\s+', ' ', context)
+            context = re.sub(r'[^\w\s.,;:-]', '', context)
+            
+            return context
+            
+        except Exception as e:
+            logger.error(f"Context extraction failed: {str(e)}")
+            return ""
+
+    def _calculate_education_bonus(self, text: str) -> float:
+        """Calculate education-based experience bonus."""
+        try:
+            bonus = 0.0
+            text_lower = text.lower()
+            
+            # PhD bonus
+            if re.search(r'ph\.?d|doctor of philosophy|dissertation', text_lower):
+                bonus += 3.0
+            # Masters bonus
+            elif re.search(r'master|ms|m\.s|thesis', text_lower):
+                bonus += 1.5
+            # Research experience bonus
+            if re.search(r'research\s+(?:assistant|associate|fellow)', text_lower):
+                bonus += 0.5
+            
+            return bonus
+            
+        except Exception as e:
+            logger.error(f"Education bonus calculation failed: {str(e)}")
+            return 0.0
+
+    def _analyze_skill_groups(self, skill_details: List[Dict], skill_groups: Dict) -> Dict[str, Any]:
+        """Analyze skill groups with enhanced context awareness."""
+        try:
+            group_analysis = {}
+            
+            for group_name, group_skills in skill_groups.items():
+                matched_skills = []
+                total_confidence = 0.0
+                
+                for skill_detail in skill_details:
+                    if skill_detail['skill'] in group_skills:
+                        matched_skills.append({
+                            'skill': skill_detail['skill'],
+                            'confidence': skill_detail['confidence'],
+                            'context': skill_detail['context']
+                        })
+                        total_confidence += skill_detail['confidence']
+                
+                if matched_skills:
+                    avg_confidence = total_confidence / len(matched_skills)
+                    coverage = len(matched_skills) / len(group_skills)
+                    
+                    group_analysis[group_name] = {
+                        'matched_skills': matched_skills,
+                        'coverage': coverage,
+                        'average_confidence': avg_confidence,
+                        'strength': self._calculate_group_strength(coverage, avg_confidence)
+                    }
+            
+            return group_analysis
+            
+        except Exception as e:
+            logger.error(f"Skill group analysis failed: {str(e)}")
+            return {}
+
+    def _calculate_group_strength(self, coverage: float, confidence: float) -> str:
+        """Calculate strength of skill group match."""
+        try:
+            combined_score = coverage * confidence
+            
+            if combined_score >= 0.8:
+                return "STRONG"
+            elif combined_score >= 0.6:
+                return "MODERATE"
+            elif combined_score >= 0.4:
+                return "PARTIAL"
             else:
-                # Create pattern from variations or skill name
-                variations = []
+                return "WEAK"
                 
-                # Check skill variations
-                if skill_lower in self.skill_variations:
-                    variations.extend(self.skill_variations[skill_lower])
-                
-                # Add the original skill name and common variations
-                variations.append(skill.lower())
-                variations.extend([
-                    skill.lower().replace(' ', ''),  # Remove spaces
-                    skill.lower().replace(' ', '-'),  # Hyphenated
-                    skill.lower().replace(' ', '_')   # Underscored
-                ])
-                
-                # Create pattern that matches any variation
-                pattern = r'\b(?:' + '|'.join(map(re.escape, variations)) + r')\b'
-                self.patterns['skills'][skill_lower] = pattern
+        except Exception as e:
+            logger.error(f"Group strength calculation failed: {str(e)}")
+            return "UNKNOWN"
+
+    def _get_skill_variations(self, skill: str) -> List[str]:
+        """Get skill variations from config with fallback handling."""
+        try:
+            # Handle both string and dict skill formats
+            if isinstance(skill, dict):
+                skill_name = skill.get('name', '')
+                skill_key = skill_name.lower().replace(' ', '_')
+            else:
+                skill_key = skill.lower().replace(' ', '_')
+                skill_name = skill
             
-            # Search for skill
-            found = re.search(pattern, text, re.IGNORECASE)
-            if found:
-                # Get surrounding context (up to 100 chars)
-                start = max(0, found.start() - 50)
-                end = min(len(text), found.end() + 50)
-                context = text[start:end].strip()
-                
-                # Check if in skills section - more lenient check
-                if re.search(r'(?:skills?|expertise|proficiency|competencies|tools|technologies|technical|strengths)', text, re.IGNORECASE):
-                    return {'matched': True, 'context': None}
-                
-                # More lenient context patterns including research/academic terms
-                context_patterns = [
-                    r'(?:using|with|in|implemented|developed|built|created|designed|managed|led|worked|utilized|applied)',
-                    r'(?:experience|expertise|proficiency|knowledge|understanding|background|familiarity)',
-                    r'(?:certification|certified|trained|studied|learned|mastered)',
-                    r'(?:projects?|applications?|systems?|platforms?|solutions?|frameworks?|tools?)',
-                    r'(?:analysis|analytics|development|implementation|architecture)',
-                    r'(?:research|paper|publication|thesis|dissertation|study)',
-                    r'(?:algorithm|model|method|technique|approach)',
-                    r'(?:developed|implemented|designed|optimized|enhanced)'
-                ]
-                
-                has_context = any(re.search(p, context, re.IGNORECASE) for p in context_patterns)
-                return {'matched': True, 'context': context if has_context else None}
-                
-            return {'matched': False, 'context': None}
+            variations = set([skill_name.lower()])  # Start with the original skill
             
-        except re.error as e:
-            logger.error(f"Invalid regex pattern for skill {skill}: {e}")
-            return {'matched': False, 'context': None}
+            # Add configured variations
+            if skill_key in self.skill_variations:
+                config_variations = self.skill_variations[skill_key]
+                if isinstance(config_variations, dict):
+                    variations.update(config_variations.get('aliases', []))
+                    
+                    # Add forms if they exist
+                    base_skill = skill_name.lower()
+                    for form in config_variations.get('forms', []):
+                        variations.add(f"{base_skill} {form}")
+            
+            # Add common variations
+            variations.update([
+                skill_name.lower().replace(' ', ''),
+                skill_name.lower().replace(' ', '-'),
+                skill_name.lower().replace('-', ' '),
+                f"{skill_name.lower()}s",  # Plural
+                f"{skill_name.lower()}ing"  # Gerund
+            ])
+            
+            return list(variations)
+            
+        except Exception as e:
+            logger.error(f"Skill variation generation failed for {skill}: {str(e)}")
+            return [skill.lower() if isinstance(skill, str) else skill.get('name', '').lower()]
 
-    def calculate_match_score(self, role_name: str, matched_skills: Dict, experience_years: int) -> Dict[str, Any]:
-        """Calculate match score based on skills and experience."""
-        logger.info("\n" + "="*50)
-        logger.info(f"Calculating match score for {role_name}")
-        logger.info(f"Experience years: {experience_years}")
-
-        # Input validation with proper error cases
-        if not role_name or role_name not in self.config.get('job_roles', {}):
-            return self._error_response("Invalid role name", 'invalid_role')
-        
-        if experience_years is None:
-            return self._error_response("Invalid experience years", 'none_values')
-        
-        if experience_years < 0:
-            return self._error_response("Invalid experience years", 'negative_years')
-        
-        if not matched_skills or not isinstance(matched_skills, dict):
-            return self._error_response("Invalid skills format", 'missing_required')
-        
-        if 'required' not in matched_skills:
-            return self._error_response("Missing required skills", 'missing_required')
-
-        # Get role configuration
-        role_config = self.config.get('job_roles', {}).get(role_name)
-        
-        # Calculate weighted skills score
-        skill_weights = self.scoring_config.get('skill_weights', {})
-        required_weight = skill_weights.get('required', 0)
-        preferred_weight = skill_weights.get('preferred', 0)
-        
-        # Calculate required and preferred ratios
-        total_required = len(matched_skills.get('required', []))
-        min_required = len(role_config.get('required_skills', []))
-        required_ratio = total_required / min_required if min_required > 0 else 0.0
-
-        total_preferred = len(matched_skills.get('preferred', []))
-        min_preferred = len(role_config.get('preferred_skills', []))
-        preferred_ratio = total_preferred / min_preferred if min_preferred > 0 else 0.0
-        
-        # Calculate experience score with research consideration
-        min_years = role_config.get('min_years_experience', 4)
-        if experience_years >= min_years:
-            experience_score = 100
-        elif experience_years >= min_years * 0.75:
-            experience_score = 85
-        elif experience_years >= min_years * 0.5:
-            experience_score = 70
-        else:
-            experience_score = max(25, (experience_years / min_years) * 100)
-
-        # Calculate raw skills score
-        raw_skills = (required_ratio * required_weight + preferred_ratio * preferred_weight) * 100
-        skills_score = int(round(raw_skills))
-
-        # Adjust skills score for high skill matches
-        if required_ratio >= 0.85 and preferred_ratio >= 0.5:
-            skills_score = max(skills_score, 85)  # Ensure minimum 85 for strong skill matches
-
-        # Get role-specific weights
-        weights = self.scoring_config.get('weights', {}).get(
-            role_config.get('scoring_weights', 'default'),
-            self.scoring_config.get('weights', {}).get('default', {})
-        )
-        skills_weight = weights.get('skills', 0)
-        experience_weight = weights.get('experience', 0)
-
-        # Calculate initial weighted score
-        raw_score = (skills_score * skills_weight + experience_score * experience_weight)
-        weight_sum = skills_weight + experience_weight
-        technical_score = int(round(raw_score / weight_sum))
-
-        # Handle special cases first
-        if len(matched_skills.get('required', [])) <= 1:
+    def _extract_experience_details(self, text: str) -> Dict[str, Any]:
+        """Extract detailed experience information including location and type context."""
+        try:
+            # Initialize result structure
+            details = {
+                'us_years': 0.0,
+                'non_us_years': 0.0,
+                'professional_years': 0.0,
+                'academic_years': 0.0,
+                'internship_years': 0.0,
+                'context': 'unknown',
+                'total_years': 0.0
+            }
+            
+            # Get patterns from config
+            us_pattern = self.config['scoring_config']['location_patterns']['us']
+            non_us_pattern = self.config['scoring_config']['location_patterns']['non_us']
+            professional_patterns = self.config['scoring_config']['experience_patterns']['professional']
+            academic_patterns = self.config['scoring_config']['experience_patterns']['academic']
+            internship_patterns = self.config['scoring_config']['experience_patterns']['internship']
+            
+            # Extract total experience
+            exp_info = self.extract_experience(text)
+            total_years = exp_info['years']
+            
+            # Determine location context
+            us_matches = len(re.findall(us_pattern, text, re.I))
+            non_us_matches = len(re.findall(non_us_pattern, text, re.I))
+            
+            # Calculate location-based experience
+            if us_matches > non_us_matches:
+                details['us_years'] = total_years
+                details['context'] = 'us'
+            else:
+                details['non_us_years'] = total_years
+                details['context'] = 'non_us'
+            
+            # Determine experience type context
+            professional_matches = sum(len(re.findall(pattern, text, re.I)) for pattern in professional_patterns)
+            academic_matches = sum(len(re.findall(pattern, text, re.I)) for pattern in academic_patterns)
+            internship_matches = sum(len(re.findall(pattern, text, re.I)) for pattern in internship_patterns)
+            
+            # Calculate experience type distribution
+            total_matches = professional_matches + academic_matches + internship_matches
+            if total_matches > 0:
+                details['professional_years'] = (professional_matches / total_matches) * total_years
+                details['academic_years'] = (academic_matches / total_matches) * total_years
+                details['internship_years'] = (internship_matches / total_matches) * total_years
+            else:
+                # Default to professional if no clear indicators
+                details['professional_years'] = total_years
+            
+            details['total_years'] = total_years
+            
+            return details
+            
+        except Exception as e:
+            logger.error(f"Experience details extraction failed: {str(e)}")
             return {
-                'technical_match_score': 0,
-                'skills_score': 0,
-                'experience_score': experience_score,
-                'analysis': 'Failed required skills threshold',
-                'skills_breakdown': {
-                    'required_match': float(required_ratio * 100),
-                    'preferred_match': float(preferred_ratio * 100),
-                    'required_score': float(required_ratio),
-                    'preferred_score': float(preferred_ratio)
-                }
+                'us_years': 0.0,
+                'non_us_years': 0.0,
+                'professional_years': 0.0,
+                'academic_years': 0.0,
+                'internship_years': 0.0,
+                'context': 'unknown',
+                'total_years': 0.0
             }
 
-        # Check required skills threshold
-        threshold = role_config.get('scoring_constraints', {}).get('required_skills_threshold', 0.6)
-        if required_ratio < threshold:
-            technical_score = 35  # Fixed score for no match
-            return {
-                'technical_match_score': technical_score,
-                'skills_score': skills_score,
-                'experience_score': experience_score,
-                'analysis': 'Below required skills threshold',
-                'skills_breakdown': {
-                    'required_match': float(required_ratio * 100),
-                    'preferred_match': float(preferred_ratio * 100),
-                    'required_score': float(required_ratio),
-                    'preferred_score': float(preferred_ratio)
-                }
-            }
-
-        # Determine score range based on combined factors
-        if required_ratio >= 0.85 and experience_years >= min_years:
-            technical_score = max(technical_score, 95)  # Strong match with high experience
-        elif required_ratio >= 0.75 and experience_years >= min_years * 0.75:
-            technical_score = max(technical_score, 85)  # Strong match
-        elif required_ratio >= 0.6:  # Good match threshold
-            if experience_years >= min_years * 0.5:
-                technical_score = max(technical_score, 75)  # Fixed good match score
+    def _calculate_experience_score(self, text: str, role_config: Dict) -> float:
+        """Calculate experience score with enhanced context awareness"""
+        try:
+            min_years = role_config.get('min_years_experience', 0)
             
-            # Force good match range
-            technical_score = max(70, min(84, technical_score))
-        elif required_ratio >= 0.5 and experience_years >= min_years * 0.5:
-            technical_score = max(50, min(69, technical_score))   # Potential match: 50-69
-
-        return {
-            'technical_match_score': technical_score,
-            'skills_score': skills_score,
-            'experience_score': experience_score,
-            'analysis': self._generate_analysis(technical_score),
-            'skills_breakdown': {
-                'required_match': float(required_ratio * 100),
-                'preferred_match': float(preferred_ratio * 100),
-                'required_score': float(required_ratio),
-                'preferred_score': float(preferred_ratio)
-            }
-        }
-
-    def _generate_analysis(self, technical_score: int) -> str:
-        """Generate analysis message based on technical score."""
-        if technical_score >= self.scoring_config.get('thresholds', {}).get('strong_match', 0):
-            return "Strong technical match"
-        elif technical_score >= self.scoring_config.get('thresholds', {}).get('good_match', 0):
-            return "Good technical match"
-        elif technical_score >= self.scoring_config.get('thresholds', {}).get('potential_match', 0):
-            return "Potential match with training"
-        elif technical_score >= self.scoring_config.get('thresholds', {}).get('minimum_match', 0):
-            return "Below expectations"
-        else:
-            return "Failed required skills threshold"
-
-    def _error_response(self, message: str, case: str = "") -> Dict[str, Any]:
-        """Helper method to generate error response with consistent format."""
-        analysis = f"Error: {message}"
-        if case:
-            analysis += f" ({case})"
-        return {
-            'technical_match_score': 0,
-            'skills_score': 0,
-            'experience_score': 0,
-            'analysis': analysis,
-            'skills_breakdown': {
-                'required_match': 0.0,
-                'preferred_match': 0.0,
-                'required_score': 0.0,
-                'preferred_score': 0.0
-            }
-        }
-
-    def _load_config(self, config_path: str) -> Dict:
-        """Load configuration from YAML file."""
-        with open(config_path, 'r') as file:
-            return yaml.safe_load(file)
+            # Extract experience details
+            exp_details = self._extract_experience_details(text)
+            
+            # Calculate weighted years based on location and experience type
+            weights = self.config['scoring_config']['experience_weights']
+            
+            # Weight US vs non-US experience with extreme difference
+            location_weighted_years = (
+                exp_details['us_years'] * weights['us_experience'] +
+                exp_details['non_us_years'] * weights['non_us_experience'] * 0.2  # Further reduced from 0.3 to 0.2
+            )
+            
+            # Weight professional vs academic/internship experience with extreme difference
+            type_weighted_years = (
+                exp_details['professional_years'] * weights.get('professional_multiplier', 1.0) +
+                exp_details['academic_years'] * weights.get('academic_multiplier', 0.1) +  # Further reduced from 0.2 to 0.1
+                exp_details['internship_years'] * weights.get('internship_multiplier', 0.02)  # Further reduced from 0.05 to 0.02
+            )
+            
+            # Combine weighted years with extreme emphasis on professional experience
+            total_weighted_years = (location_weighted_years * 0.1) + (type_weighted_years * 0.9)  # Changed from 0.2/0.8 to 0.1/0.9
+            
+            # Calculate base score with extreme penalties for not meeting minimum
+            if total_weighted_years >= min_years:
+                base_score = 1.0
+            else:
+                # Progressive penalty: larger gap = exponentially lower score
+                gap_ratio = total_weighted_years / min_years
+                base_score = math.pow(gap_ratio, 5)  # Increased from 4th to 5th power for even stronger penalty
+            
+            # Apply additional penalties
+            penalties = 1.0
+            
+            # Significant shortfall penalty (more than 30% below minimum)
+            if total_weighted_years < (min_years * 0.7):
+                penalties *= 0.2  # Increased penalty from 0.3 to 0.2 (80% penalty)
+            
+            # Mostly academic/internship penalty with tiered approach
+            if exp_details['total_years'] > 0:
+                professional_ratio = exp_details['professional_years'] / exp_details['total_years']
+                if professional_ratio < 0.8:  # Increased threshold from 0.7 to 0.8
+                    penalties *= 0.4  # Increased penalty from 0.5 to 0.4 (60% penalty)
+                if professional_ratio < 0.6:  # Additional tier
+                    penalties *= 0.6  # Additional 40% penalty
+                if professional_ratio < 0.4:  # Additional tier for very low professional experience
+                    penalties *= 0.5  # Additional 50% penalty
+            
+            # Non-US experience penalty with tiered approach
+            if exp_details['us_years'] < (min_years * 0.8):  # Increased threshold from 0.7 to 0.8
+                penalties *= 0.5  # Increased penalty from 0.6 to 0.5 (50% penalty)
+            if exp_details['us_years'] < (min_years * 0.5):  # Additional tier
+                penalties *= 0.7  # Additional 30% penalty
+            
+            # Calculate final score
+            final_score = base_score * penalties
+            
+            # Apply context multipliers from config with minimal academic weight
+            if exp_details['context'] == 'enterprise':
+                final_score *= self.config['scoring_config']['context_weights']['enterprise']
+            elif exp_details['context'] == 'research':
+                final_score *= self.config['scoring_config']['context_weights']['research'] * 0.4  # Further reduced from 0.6 to 0.4
+            elif exp_details['context'] == 'academic':
+                final_score *= self.config['scoring_config']['context_weights']['academic'] * 0.3  # Further reduced from 0.5 to 0.3
+            
+            # Additional penalties for early career and academic focus
+            if exp_details['total_years'] < 2:
+                final_score *= 0.5  # Increased penalty from 0.7 to 0.5 (50% penalty for very early career)
+            
+            if exp_details['academic_years'] > exp_details['professional_years']:
+                final_score *= 0.6  # New 40% penalty when academic years exceed professional years
+            
+            # Additional penalty for insufficient professional experience
+            if exp_details['professional_years'] < min_years * 0.5:
+                final_score *= 0.7  # New 30% penalty for insufficient professional experience
+            
+            return min(1.0, final_score)
+            
+        except Exception as e:
+            logger.error(f"Experience score calculation failed: {str(e)}")
+            return 0.0

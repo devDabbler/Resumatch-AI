@@ -15,7 +15,7 @@ def setup_logging():
         file_log_level = logging.DEBUG
         console_log_level = logging.INFO
     
-    # Create formatters
+    # Create formatter
     detailed_formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
     )
@@ -27,13 +27,14 @@ def setup_logging():
     file_handler = RotatingFileHandler(
         'logs/detailed_matching.log',
         maxBytes=10*1024*1024,  # 10MB
-        backupCount=5
+        backupCount=5,
+        encoding='utf-8'  # UTF-8 encoding for file handler
     )
     file_handler.setLevel(file_log_level)
     file_handler.setFormatter(detailed_formatter)
     
     # Set up console handler for important info
-    console_handler = logging.StreamHandler(sys.stdout)  # Change to output to stdout
+    console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(console_log_level)
     console_handler.setFormatter(detailed_formatter)
     
@@ -59,7 +60,7 @@ def setup_logging():
 
     # Ensure logs are flushed immediately
     for handler in root_logger.handlers:
-        handler.flush()  # Ensure logs are flushed immediately
+        handler.flush()
 
 # Call this function at startup
 setup_logging()
