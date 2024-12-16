@@ -185,7 +185,13 @@ scoring_config:
     enterprise: 0.9
     research: 0.4
     academic: 0.3
-    
+
+  skill_weights:
+    required: 0.7
+    preferred: 0.3
+    bonus: 0.1
+    penalty: 0.2
+
   location_patterns:
     us: '\b(?:US|USA|United\s+States|California|New\s+York|Texas|Washington)\b'
     non_us: '\b(?:India|China|Europe|Asia|Africa)\b'
@@ -213,21 +219,39 @@ job_roles:
       location_weight: 0.2
       context_weight: 0.1
       
-    required_skills: [
-      "Python",
-      "Machine Learning",
-      "Statistics",
-      "Data Visualization",
-      "Git"
-    ]
+    required_skills:
+      - name: "Python"
+        min_years: 3
+        context: "production"
+      - name: "Machine Learning"
+        min_years: 3
+        context: "enterprise"
+      - name: "Statistics"
+        min_years: 2
+        context: "analysis"
+      - name: "Data Visualization"
+        min_years: 2
+        context: "analysis"
+      - name: "Git"
+        min_years: 1
+        context: "development"
     
-    preferred_skills: [
-      "Deep Learning",
-      "MLOps",
-      "Cloud Platforms",
-      "Spark",
-      "Docker"
-    ]
+    preferred_skills:
+      - name: "Deep Learning"
+        min_years: 1
+        context: "research"
+      - name: "MLOps"
+        min_years: 1
+        context: "production"
+      - name: "Cloud Platforms"
+        min_years: 1
+        context: "production"
+      - name: "Spark"
+        min_years: 1
+        context: "production"
+      - name: "Docker"
+        min_years: 1
+        context: "production"
 
     skill_requirements:
       Python:
@@ -236,7 +260,6 @@ job_roles:
       "Machine Learning":
         min_years: 3
         context: "enterprise"
-      # Other skill requirements...
 
   "Software Development Engineer":
     role_type: technical
