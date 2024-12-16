@@ -2,14 +2,18 @@ import streamlit as st
 import yaml
 import json
 import logging
+import traceback
 from utils.pdf import PDFProcessor, DOCXProcessor
 from utils.matcher import JobMatcher
 from utils.llm import LLMAnalyzer
 from utils.report_generator import ReportGenerator
 from utils.schemas import AnalysisResult
-from typing import Dict
+from utils.parallel_processor import ParallelProcessor
+from typing import Dict, Any
 from dotenv import load_dotenv
 from utils.logging_config import setup_logging
+from pathlib import Path
+from functools import partial
 
 # Initialize logging configuration
 setup_logging()
@@ -18,141 +22,258 @@ logger = logging.getLogger('app')
 # Load environment variables
 load_dotenv()
 
+# Initialize global components for parallel processing
+pdf_processor = PDFProcessor()
+docx_processor = DOCXProcessor()
+job_matcher = JobMatcher('config/jobs.yaml')
+llm_analyzer = LLMAnalyzer()
+
 def load_config() -> Dict:
     """Load job configuration"""
     try:
         with open('config/jobs.yaml', 'r') as file:
             config = yaml.safe_load(file)
-            logger.info("Successfully loaded job configuration")
             return config
     except Exception as e:
         logger.error(f"Failed to load configuration: {str(e)}")
         raise
 
-def display_results(analysis_results: AnalysisResult, rank: int = None):
-    """Display analysis results in a structured format"""
+def display_interview_questions(questions):
+    """Helper function to display interview questions in a consistent format"""
+    for i, question in enumerate(questions, 1):
+        if isinstance(question, dict):
+            category = question.get('category', 'Technical')
+            q_text = question.get('question', '')
+            context = question.get('context', '')
+            st.markdown(
+                f"""
+                <div style='margin-bottom: 1.2rem; padding: 0.8rem;
+                     background: #f8f9fa; border-radius: 8px; 
+                     font-size: 1.1em;'>
+                    <strong>Q{i} ({category}):</strong> {q_text}
+                    {f"<br><em>Context: {context}</em>" if context else ""}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        elif isinstance(question, str):
+            st.markdown(
+                f"""
+                <div style='margin-bottom: 1.2rem; padding: 0.8rem;
+                     background: #f8f9fa; border-radius: 8px; 
+                     font-size: 1.1em;'>
+                    <strong>Q{i}:</strong> {question}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            
+def display_results(analysis_results: AnalysisResult):
+    """Display analysis results in a structured format."""
     try:
-        # Ensure we have a valid AnalysisResult object
+        # Validate input
         if not isinstance(analysis_results, AnalysisResult):
-            logger.error("Invalid analysis results format")
-            st.error("Invalid analysis results format")
-            st.write(analysis_results)
+            logger.error(f"[UI] Invalid analysis_results type: {type(analysis_results)}")
+            st.error("Invalid analysis results")
             return
 
-        # Add Download PDF section at the top
-        st.markdown("### 📊 Analysis Report")
+        # Display match score and recommendation
         try:
-            report_gen = ReportGenerator()
-            pdf_bytes = report_gen.generate_report(analysis_results.model_dump())  # Convert to dict
-            key_suffix = f"_{rank}" if rank is not None else ""
-            st.download_button(
-                label="📥 Download PDF Report",
-                data=pdf_bytes,
-                file_name=f"resume_analysis_report{key_suffix}.pdf",
-                mime="application/pdf",
-                key=f"download_report{key_suffix}"
-            )
-        except Exception as e:
-            logger.error(f"Failed to generate PDF report: {str(e)}")
-            st.error("Failed to generate PDF report. Please try again.")
+            score = analysis_results.technical_match_score
+            recommendation = analysis_results.recommendation.value
+            if recommendation == "STRONG_MATCH":
+                st.success("✅ Strong Match - Proceed with Recruiter Screen")
+                color = "#28a745"
+            elif recommendation == "GOOD_MATCH":
+                st.success("👍 Good Match - Consider for Interview")
+                color = "#28a745"
+            elif recommendation == "POTENTIAL_MATCH":
+                st.info("🤔 Potential Match - Review Further")
+                color = "#17a2b8"
+            else:
+                st.warning("⚠️ Not a Match")
+                color = "#ffc107"
 
-        # Display rank if provided
-        if rank is not None:
+            # Score display
             st.markdown(
-                "<h2 style='text-align: center; font-size: 2.2em;'>"
-                f"🏆 Rank #{rank}</h2>",
+                f"""
+                <div style='text-align: center; padding: 1rem; margin-bottom: 1rem;'>
+                    <h2 style='color: {color}; font-size: 2em;'>Match Score: {score}%</h2>
+                    <div style='background: #e9ecef; border-radius: 10px; height: 20px; width: 100%;'>
+                        <div style='background: {color}; width: {score}%; height: 100%; border-radius: 10px;'></div>
+                    </div>
+                </div>
+                """,
                 unsafe_allow_html=True
             )
 
-        # Initialize recommendation color
-        recommendation_color = "#ffc107"  # Default warning yellow
+        except Exception as e:
+            logger.error(f"[UI] Error displaying score: {str(e)}")
+            st.error("Error displaying match score")
 
-        # Display recommendation with clear visual indicator
-        recommendation = analysis_results.recommendation.value  # Access enum value
-        logger.info(f"Displaying results with recommendation: {recommendation}")
-        
-        if recommendation == "STRONG_MATCH":
-            st.success("✅ Strong Match - Proceed with Recruiter Screen and Fast Track to Hiring Team")
-            recommendation_color = "#28a745"  # Bootstrap success green
-        elif recommendation == "GOOD_MATCH":
-            st.success("👍 Good Match - Proceed with Recruiter Screen")
-            recommendation_color = "#28a745"  # Bootstrap success green
-        elif recommendation == "POTENTIAL_MATCH":
-            st.info("🤔 Potential Match - Additional Screening Required")
-            recommendation_color = "#17a2b8"  # Bootstrap info blue
-        else:
-            st.warning("⚠️ Not a Match - Do Not Proceed")
+        # Display sections
+        try:
+            if analysis_results.key_findings:
+                st.markdown("### 🎯 Key Findings")
+                for finding in analysis_results.key_findings:
+                    st.markdown(f"• {finding}")
 
-        # Display match score with visual meter
-        score = analysis_results.technical_match_score
-        st.markdown(
-            f"""
-            <div style='text-align: center; padding: 1.5rem;'>
-                <h3 style='color: {recommendation_color}; font-size: 1.8em;'>
-                    Match Score: {score}%
-                </h3>
-                <div style='background: #e9ecef; border-radius: 10px; 
-                     height: 24px; width: 100%; max-width: 400px; 
-                     margin: 1rem auto;'>
-                    <div style='background: {recommendation_color}; 
-                         width: {score}%; height: 100%; border-radius: 10px; 
-                         transition: width 0.5s ease-in-out;'></div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+            if analysis_results.skills_assessment:
+                st.markdown("### 💡 Skills Assessment")
+                skills_data = []
+                for skill in analysis_results.skills_assessment:
+                    skills_data.append({
+                        "Skill": skill.skill,
+                        "Level": skill.proficiency,
+                        "Years": skill.years
+                    })
+                if skills_data:
+                    st.dataframe(skills_data, use_container_width=True)
 
-        # Display key findings
-        if analysis_results.key_findings:
-            st.markdown("### 🎯 Key Findings")
-            st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-            for finding in analysis_results.key_findings:
-                st.markdown(
-                    "<div style='margin-bottom: 0.8rem; font-size: 1.1em;'>"
-                    f"✓ {finding}</div>",
-                    unsafe_allow_html=True
-                )
-            st.markdown("</div>", unsafe_allow_html=True)
+            if analysis_results.technical_gaps:
+                st.markdown("### ⚠️ Technical Gaps")
+                for gap in analysis_results.technical_gaps:
+                    st.markdown(f"• {gap}")
 
-        # Display interview questions
-        if analysis_results.interview_questions:
-            st.markdown("### 💬 Suggested Interview Questions")
-            st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-            for i, question in enumerate(analysis_results.interview_questions, 1):
-                st.markdown(
-                    f"""
-                    <div style='margin-bottom: 1.2rem; padding: 0.8rem;
-                         background: #f8f9fa; border-radius: 8px; 
-                         font-size: 1.1em;'>
-                        <strong>Q{i}.</strong> {question}
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-            st.markdown("</div>", unsafe_allow_html=True)
+            if analysis_results.interview_questions:
+                st.markdown("### 💬 Recommended Interview Questions")
+                for i, question in enumerate(analysis_results.interview_questions, 1):
+                    if isinstance(question, str):
+                        st.markdown(f"{i}. {question}")
+                    else:  # InterviewQuestion object
+                        category = question.category
+                        q_text = question.question
+                        context = question.context or ""
+                        st.markdown(
+                            f"""
+                            <div style='margin-bottom: 1.2rem; padding: 0.8rem; 
+                                  background-color: #f8f9fa; border-radius: 5px;'>
+                                <strong>{i}. {category}</strong><br/>
+                                {q_text}<br/>
+                                <em style='color: #6c757d; font-size: 0.9em;'>{context}</em>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
 
-        # Display concerns
-        if analysis_results.concerns:
-            st.markdown("### ⚠️ Areas of Concern")
-            st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-            for concern in analysis_results.concerns:
-                st.markdown(
-                    f"""
-                    <div style='color: #dc3545; margin-bottom: 0.8rem; 
-                         font-size: 1.1em;'>
-                        • {concern}
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-            st.markdown("</div>", unsafe_allow_html=True)
+            if analysis_results.concerns:
+                st.markdown("### ⚠️ Areas of Concern")
+                for concern in analysis_results.concerns:
+                    st.markdown(f"• {concern}")
+
+        except Exception as e:
+            logger.error(f"[UI] Error displaying sections: {str(e)}")
+            st.error("Error displaying analysis sections")
 
     except Exception as e:
-        logger.error(f"Error displaying results: {str(e)}")
-        st.error("Error displaying results")
-        st.error(str(e))
-        st.write(analysis_results)  # Show raw results for debugging
+        logger.error(f"[UI] Display error: {str(e)}")
+        st.error("Failed to display analysis results")
+
+def process_resume(resume_path: Path, job_role: str = None) -> Dict[str, Any]:
+    """Process a single resume with enhanced error handling and logging."""
+    try:
+        if not job_role:
+            raise ValueError("No job role selected")
+            
+        filename = resume_path.name
+        file_extension = resume_path.suffix.lower()
+        
+        # Extract text based on file type
+        if file_extension == '.pdf':
+            text = pdf_processor.extract_text_from_path(str(resume_path))
+        elif file_extension in ['.docx', '.doc']:
+            text = docx_processor.extract_text(str(resume_path))
+        else:
+            raise ValueError(f"Unsupported file type: {file_extension}")
+        
+        # Process skills with detailed logging
+        try:
+            skills = job_matcher.match_skills(text, job_role)
+        except Exception as skills_error:
+            logger.error(f"Skills matching failed for {filename}: {str(skills_error)}")
+            logger.error(f"Skills error traceback: {traceback.format_exc()}")
+            skills = {'required': [], 'preferred': [], 'context': {}}
+        
+        # Process experience with detailed logging
+        try:
+            experience = job_matcher.extract_experience(text)
+        except Exception as exp_error:
+            logger.error(f"Experience extraction failed for {filename}: {str(exp_error)}")
+            logger.error(f"Experience error traceback: {traceback.format_exc()}")
+            experience = {}
+        
+        # LLM Analysis with detailed logging
+        try:
+            analysis_dict = llm_analyzer.analyze_resume(text, job_role, skills, experience)
+        except Exception as analysis_error:
+            logger.error(f"LLM analysis failed for {filename}: {str(analysis_error)}")
+            logger.error(f"Analysis error traceback: {traceback.format_exc()}")
+            # Create fallback analysis dictionary
+            analysis_dict = {
+                'technical_match_score': 0,
+                'recommendation': 'NO_MATCH',
+                'skills_assessment': [],
+                'technical_gaps': ['Unable to analyze resume'],
+                'interview_questions': [{
+                    'category': 'Technical Implementation',
+                    'question': 'Please describe your technical background and experience',
+                    'context': 'Fallback question due to processing error'
+                }],
+                'key_findings': ['Analysis failed - manual review required'],
+                'concerns': ['Unable to automatically assess technical qualifications'],
+                'confidence_score': 0.0
+            }
+        
+        # Create AnalysisResult with detailed validation
+        try:
+            analysis_result = AnalysisResult(
+                technical_match_score=analysis_dict.get('technical_match_score', 0),
+                recommendation=analysis_dict.get('recommendation', 'NO_MATCH'),
+                skills_assessment=analysis_dict.get('skills_assessment', []),
+                technical_gaps=analysis_dict.get('technical_gaps', []),
+                interview_questions=analysis_dict.get('interview_questions', []),
+                key_findings=analysis_dict.get('key_findings', []),
+                concerns=analysis_dict.get('concerns', []),
+                confidence_score=analysis_dict.get('confidence_score', 0.0),
+                experience_details=analysis_dict.get('experience_details')
+            )
+        except Exception as result_error:
+            logger.error(f"Failed to create AnalysisResult object for {filename}")
+            logger.error(f"Validation error: {str(result_error)}")
+            logger.error(f"Validation error traceback: {traceback.format_exc()}")
+            logger.error(f"Raw analysis dict: {json.dumps(analysis_dict, indent=2)}")
+            
+            analysis_result = AnalysisResult(
+                technical_match_score=0,
+                recommendation="NO_MATCH",
+                skills_assessment=[],
+                technical_gaps=["Error processing resume"],
+                interview_questions=[{
+                    'category': 'Technical Implementation',
+                    'question': 'Please describe your technical background and experience',
+                    'context': 'Fallback question due to processing error'
+                }],
+                key_findings=["Analysis failed - manual review required"],
+                concerns=["Unable to automatically assess qualifications"],
+                confidence_score=0.0
+            )
+        
+        return {
+            'filename': filename,
+            'status': 'success',
+            'skills': skills,
+            'analysis': analysis_result,
+            'text': text
+        }
+        
+    except Exception as e:
+        logger.error(f"Critical error processing {resume_path.name}: {str(e)}")
+        logger.error(f"Critical error traceback: {traceback.format_exc()}")
+        return {
+            'filename': resume_path.name if resume_path else 'Unknown',
+            'status': 'failed',
+            'error': str(e)
+        }
 
 def home_page():
     """Display the enhanced home page"""
@@ -256,214 +377,165 @@ def home_page():
 
 def evaluation_page():
     """Display the resume evaluation page"""
-    logger.info("Displaying evaluation page")
-    
-    # Initialize components
-    config = load_config()
-    pdf_processor = PDFProcessor()
-    docx_processor = DOCXProcessor()
-    job_matcher = JobMatcher('config/jobs.yaml')
-    llm_analyzer = LLMAnalyzer()
+    try:
+        # Initialize components
+        config = load_config()
+        parallel_processor = ParallelProcessor()
 
-    # Enhanced Header with Logo and Title
-    st.markdown(
-        """
-        <div style='text-align: center; padding: 1rem; margin-bottom: 2rem; 
-             background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
-             border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);'>
-            <div style='font-size: 3em; color: white; margin-bottom: 0.5rem;'>
-                🤖 Resumatch AI
-            </div>
-            <div style='font-size: 1.2em; color: #e3f2fd;'>
-                Intelligent Resume Analysis Powered by AI
-            </div>
-        </div>
-        
-        <div style='text-align: center; padding: 1rem 0 2rem 0;'>
-            <h2 style='font-size: 2.4em; margin-bottom: 0.5rem;'>
-                📄 Resume Evaluation Portal
-            </h2>
-            <p style='color: #666; font-size: 1.2em;'>
-                Upload resumes and let AI analyze them against your job requirements
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    # Create two columns with adjusted ratio
-    col1, col2 = st.columns([1, 2])
-
-    with col1:
-        # Styled container for controls
+        # Display header
         st.markdown(
             """
-            <div style='padding: 1rem; background: #f8f9fa; border-radius: 10px;
-                 box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);'>
+            <div style='text-align: center; padding: 1rem; margin-bottom: 2rem; 
+                 background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+                 border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);'>
+                <div style='font-size: 3em; color: white; margin-bottom: 0.5rem;'>
+                    🤖 Resumatch AI
+                </div>
+                <div style='font-size: 1.2em; color: #e3f2fd;'>
+                    Intelligent Resume Analysis Powered by AI
+                </div>
             </div>
             """,
             unsafe_allow_html=True
         )
-        
-        # Job role selection with emoji
-        st.markdown("### 🎯 Select Job Role")
-        selected_role = st.selectbox(
-            "Select Job Role",
-            options=list(config['job_roles'].keys()),
-            key="role_selector"
-        )
-        logger.info(f"Selected job role: {selected_role}")
 
-        # File upload section with emoji
-        st.markdown("### 📎 Upload Resumes")
-        uploaded_files = st.file_uploader(
-            "Upload Resumes",
-            type=["pdf", "docx"],
-            accept_multiple_files=True,
-            help="Upload up to 5 resumes in PDF or DOCX format"
-        )
+        # Create columns
+        col1, col2 = st.columns([1, 2])
 
-        if uploaded_files:
-            if len(uploaded_files) > 5:
-                logger.warning("User attempted to upload more than 5 resumes")
-                st.warning(
-                    "️ Maximum 5 resumes allowed. Only the first 5 will be analyzed."
-                )
-                uploaded_files = uploaded_files[:5]
-            
-            # Show file list with emojis
-            st.markdown("#### 📋 Uploaded Files:")
-            for file in uploaded_files:
-                icon = "📄" if file.name.endswith('.pdf') else "📝"
-                st.markdown(f"{icon} {file.name}")
-            
-            # Success message with count
-            st.success(f"✅ {len(uploaded_files)} resume(s) uploaded successfully")
-            
-            # Analyze button with enhanced styling
-            if st.button(
-                "🔍 Analyze Resumes",
-                type="primary",
-                use_container_width=True,
-            ):
-                logger.info("Starting resume analysis")
-                with st.spinner("🤖 AI is analyzing your resumes..."):
-                    try:
-                        all_results = []
-                        
-                        # Process each resume
-                        for file in uploaded_files:
-                            logger.info(f"Processing resume: {file.name}")
-                            # Process file based on type
-                            if file.name.lower().endswith('.pdf'):
-                                resume_text = pdf_processor.extract_text(file)
-                            else:  # DOCX
-                                resume_text = docx_processor.extract_text(file)
-                            
-                            resume_sections = pdf_processor.extract_sections(resume_text)
-
-                            # Match patterns
-                            experience_matches = job_matcher.extract_experience(
-                                resume_sections.get('experience', '')
-                            )
-                            skill_matches = job_matcher.match_skills(
-                                resume_text,
-                                selected_role
-                            )
-
-                            # LLM Analysis
-                            analysis_results = llm_analyzer.analyze_resume(
-                                resume_text,
-                                selected_role,
-                                skill_matches,
-                                experience_matches['matches'] if experience_matches else []
-                            )
-                            
-                            all_results.append({
-                                'filename': file.name,
-                                'results': analysis_results
-                            })
-
-                        # Sort results by confidence score
-                        all_results.sort(
-                            key=lambda x: x['results'].technical_match_score,
-                            reverse=True
-                        )
-                        logger.info("Successfully analyzed all resumes")
-
-                        # Display results in the second column
-                        with col2:
-                            st.markdown(
-                                "<h3 style='text-align: center; font-size: 2.4em;'>"
-                                "📊 Analysis Results</h3>",
-                                unsafe_allow_html=True
-                            )
-                                
-                            if len(all_results) > 1:
-                                st.markdown(
-                                    "<h4 style='text-align: center; "
-                                    "font-size: 1.8em;'>"
-                                    "🏆 Stack Ranked Results</h4>",
-                                    unsafe_allow_html=True
-                                )
-                                
-                            # Display each result
-                            for rank, result in enumerate(all_results, 1):
-                                st.markdown(
-                                    f"## 📄 {result['filename']}"
-                                )
-                                display_results(
-                                    result['results'],
-                                    rank if len(all_results) > 1 else None
-                                )
-                                st.divider()  # Add visual separator between results
-
-                    except Exception as e:
-                        logger.error(f"Analysis failed: {str(e)}")
-                        st.error("❌ An error occurred during analysis")
-                        if "GROQ_API_KEY" in str(e):
-                            st.error(
-                                "🔑 Please make sure you have set up your "
-                                "GROQ_API_KEY in the .env file."
-                            )
-                        else:
-                            st.error(f"Error details: {str(e)}")
-                            st.error(
-                                "Please try again. If the error persists, "
-                                "check the logs for details."
-                            )
-
-    with col2:
-        if not uploaded_files:
-            # Show welcome message when no files are uploaded
-            st.markdown(
-                """
-                <div style='text-align: center; padding: 2rem; 
-                     background: #f8f9fa; border-radius: 10px; margin-top: 2rem;'>
-                    <div style='font-size: 4em; margin-bottom: 1rem;'>
-                        👋
-                    </div>
-                    <h3 style='color: #1a237e; margin-bottom: 1rem;'>
-                        Welcome to Resumatch AI!
-                    </h3>
-                    <p style='color: #666; font-size: 1.1em;'>
-                        Get started by selecting a job role and uploading resumes
-                    </p>
-                    <div style='margin-top: 2rem; color: #666;'>
-                        <div style='margin-bottom: 0.5rem;'>
-                            ✨ AI-Powered Analysis
-                        </div>
-                        <div style='margin-bottom: 0.5rem;'>
-                            🎯 Precise Skill Matching
-                        </div>
-                        <div style='margin-bottom: 0.5rem;'>
-                            ⚡ Instant Results
-                        </div>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
+        with col1:
+            # Job role selection
+            st.markdown("### 🎯 Select Job Role")
+            selected_role = st.selectbox(
+                "Select Job Role",
+                options=list(config['job_roles'].keys()),
+                key="role_selector"
             )
+            st.session_state['selected_role'] = selected_role
+
+            # File upload
+            st.markdown("### 📎 Upload Resumes")
+            uploaded_files = st.file_uploader(
+                "Upload Resumes",
+                type=["pdf", "docx"],
+                accept_multiple_files=True,
+                help="Upload up to 5 resumes in PDF or DOCX format"
+            )
+
+            if uploaded_files:
+                # Process uploaded files
+                if len(uploaded_files) > 5:
+                    st.warning("️ Maximum 5 resumes allowed. Only the first 5 will be analyzed.")
+                    uploaded_files = uploaded_files[:5]
+
+                # Display file list
+                st.markdown("#### 📋 Uploaded Files:")
+                for file in uploaded_files:
+                    icon = "📄" if file.name.endswith('.pdf') else "📝"
+                    st.markdown(f"{icon} {file.name}")
+
+                st.success(f"✅ {len(uploaded_files)} resume(s) uploaded successfully")
+
+                # Analyze button
+                if st.button("🔍 Analyze Resumes", type="primary", use_container_width=True):
+                    logger.info("[UI] Starting resume analysis")
+                    with st.spinner("🤖 AI is analyzing your resumes in parallel..."):
+                        try:
+                            # Save files to temp directory
+                            temp_dir = Path("temp_uploads")
+                            temp_dir.mkdir(exist_ok=True)
+                            
+                            # Process files
+                            saved_files = []
+                            for uploaded_file in uploaded_files:
+                                temp_path = temp_dir / uploaded_file.name
+                                with open(temp_path, 'wb') as f:
+                                    f.write(uploaded_file.getbuffer())
+                                saved_files.append(temp_path)
+
+                            # Process resumes
+                            processor = ParallelProcessor(max_workers=min(4, len(saved_files)))
+                            process_func = partial(process_resume, job_role=selected_role)
+                            results, stats = processor.process_batch(saved_files, process_func)
+
+                            logger.info(f"[UI] Got {len(results)} results")
+
+                            # Process results
+                            successful_results = []
+                            failed_results = []
+
+                            for result in results:
+                                try:
+                                    logger.info(f"[UI] Processing result for item: {result.get('filename', 'unknown')}")
+                                    logger.info(f"Result status: {result.get('status', 'unknown')}")
+                                    logger.info(f"Result keys: {list(result.keys())}")
+                                    
+                                    if not isinstance(result, dict):
+                                        logger.error(f"[UI] Invalid result type: {type(result)}")
+                                        failed_results.append({'filename': 'Unknown', 'error': 'Invalid result type'})
+                                        continue
+                                        
+                                    if 'analysis' not in result:
+                                        logger.error("[UI] No analysis in result")
+                                        failed_results.append(result)
+                                        continue
+                                        
+                                    analysis = result['analysis']
+                                    if not isinstance(analysis, AnalysisResult):
+                                        logger.error(f"[UI] Invalid analysis type: {type(analysis)}")
+                                        failed_results.append(result)
+                                        continue
+                                        
+                                    logger.info("Analysis type: %s", type(analysis))
+                                    logger.info("Analysis fields:")
+                                    for field in ['technical_match_score', 'recommendation', 'skills_assessment', 
+                                                'technical_gaps', 'interview_questions', 'key_findings', 
+                                                'concerns', 'experience_details', 'analysis_timestamp', 
+                                                'confidence_score']:
+                                        logger.info(f"- {field}: {type(getattr(analysis, field, None))}")
+                                    
+                                    successful_results.append(result)
+                                    logger.info("[UI] Added to successful results")
+                                except Exception as e:
+                                    logger.error(f"[UI] Error processing result: {str(e)}")
+                                    if isinstance(result, dict):
+                                        failed_results.append(result)
+                                    else:
+                                        failed_results.append({'filename': 'Unknown', 'error': str(e)})
+                            # Sort results by match score
+                            successful_results.sort(
+                                key=lambda x: x['analysis'].technical_match_score if x.get('analysis') else 0,
+                                reverse=True
+                            )
+
+                            # Display results in second column
+                            with col2:
+                                st.empty()  # Clear previous results
+                                
+                                if successful_results:
+                                    for idx, result in enumerate(successful_results, 1):
+                                        with st.container():
+                                            st.markdown(f"### Resume {idx}: {result['filename']}")
+                                            try:
+                                                display_results(result['analysis'])
+                                                st.divider()
+                                            except Exception as e:
+                                                logger.error(f"[UI] Error displaying result {idx}: {str(e)}")
+                                                st.error(f"Error displaying result {idx}")
+                                else:
+                                    st.warning("No results to display")
+
+                                if failed_results:
+                                    st.error("⚠️ Failed to analyze some resumes:")
+                                    for result in failed_results:
+                                        st.warning(f"• {result.get('filename', 'Unknown file')}")
+
+                        except Exception as e:
+                            logger.error(f"[UI] Analysis failed: {str(e)}")
+                            st.error("Failed to analyze resumes. Please try again.")
+
+    except Exception as e:
+        logger.error(f"[UI] Page error: {str(e)}")
+        st.error("An error occurred. Please refresh the page and try again.")
 
 def main():
     """Main application entry point"""

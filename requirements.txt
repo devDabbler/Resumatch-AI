@@ -9,3 +9,5 @@ PyMuPDF
 regex
 reportlab>=4.1.0
 python-docx
+pdfplumber==0.10.3
+psutil==5.9.7
