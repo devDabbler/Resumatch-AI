@@ -1,66 +1,52 @@
 import logging
-import sys
 import os
+from datetime import datetime
 from logging.handlers import RotatingFileHandler
+import threading
+
+# Create logs directory if it doesn't exist
+logs_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
+os.makedirs(logs_dir, exist_ok=True)
+
+# Generate log filename with timestamp
+log_filename = os.path.join(logs_dir, f'app_{datetime.now().strftime("%Y%m%d")}.log')
 
 def setup_logging():
-    # Determine environment
-    env = os.getenv('ENVIRONMENT', 'development').lower()
-    
-    # Set appropriate log levels based on environment
-    if env == 'production':
-        file_log_level = logging.INFO
-        console_log_level = logging.WARNING
-    else:
-        file_log_level = logging.DEBUG
-        console_log_level = logging.INFO
-    
-    # Create formatter
-    detailed_formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
-    )
-    
-    # Ensure logs directory exists before creating handlers
-    os.makedirs('logs', exist_ok=True)
-    
-    # Set up rotating file handler for detailed logging (10MB per file, keep 5 backup files)
+    """Configure logging with file and console handlers."""
+    # Create logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
+    # Clear any existing handlers
+    logger.handlers.clear()
+
+    # File handler with rotation - keeps all logs
     file_handler = RotatingFileHandler(
-        'logs/detailed_matching.log',
+        log_filename,
         maxBytes=10*1024*1024,  # 10MB
         backupCount=5,
-        encoding='utf-8'  # UTF-8 encoding for file handler
+        encoding='utf-8'
     )
-    file_handler.setLevel(file_log_level)
-    file_handler.setFormatter(detailed_formatter)
-    
-    # Set up console handler for important info
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(console_log_level)
-    console_handler.setFormatter(detailed_formatter)
-    
-    # Configure root logger
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)
-    
-    # Remove any existing handlers to prevent duplication
-    root_logger.handlers = []
-    
-    root_logger.addHandler(file_handler)
-    root_logger.addHandler(console_handler)
-    
-    # Set up specific loggers with propagate=False to prevent duplication
-    loggers = ['matcher', 'llm_analyzer', 'pdf_processor', 'app']
-    for logger_name in loggers:
-        logger = logging.getLogger(logger_name)
-        logger.setLevel(logging.DEBUG)
-        logger.propagate = False  # Prevent message propagation to avoid duplication
-        logger.handlers = []  # Clear any existing handlers
-        logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
+    file_formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    file_handler.setFormatter(file_formatter)
+    file_handler.setLevel(logging.INFO)  # Keep detailed logs in file
+    logger.addHandler(file_handler)
 
-    # Ensure logs are flushed immediately
-    for handler in root_logger.handlers:
-        handler.flush()
+    # Console handler - only shows errors
+    console_handler = logging.StreamHandler()
+    console_formatter = logging.Formatter('%(levelname)s: %(message)s')
+    console_handler.setFormatter(console_formatter)
+    console_handler.setLevel(logging.INFO)  # Changed from ERROR to INFO to show more output
+    logger.addHandler(console_handler)
 
-# Call this function at startup
-setup_logging()
+    # Set third-party loggers to WARNING to reduce noise
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+    return logger
+
+# Initialize logging
+logger = setup_logging()

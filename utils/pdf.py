@@ -5,6 +5,7 @@ import traceback
 from utils.logging_config import setup_logging
 from docx import Document
 import io
+import pdfplumber
 
 # Initialize logging configuration
 setup_logging()
@@ -173,64 +174,88 @@ class PDFProcessor(DocumentProcessor):
             if 'doc' in locals():
                 doc.close()
 
+    @staticmethod
+    def extract_text_from_path(filepath: str) -> str:
+        """
+        Extract text from a PDF file path
+        
+        Args:
+            filepath: Path to the PDF file
+            
+        Returns:
+            str: Extracted text from PDF
+            
+        Raises:
+            PDFProcessingError: If PDF is corrupted or cannot be processed
+        """
+        try:
+            doc = fitz.open(filepath)
+            
+            if doc.page_count == 0:
+                logger.error("PDF document contains no pages")
+                raise PDFProcessingError("The PDF document contains no pages")
+                
+            text = ""
+            for page_num, page in enumerate(doc):
+                try:
+                    page_text = page.get_text()
+                    text += page_text
+                    logger.debug(f"Successfully extracted text from page {page_num + 1}")
+                except Exception as e:
+                    logger.warning(f"Failed to extract text from page {page_num + 1}: {str(e)}")
+                    continue
+            
+            if not text.strip():
+                logger.warning("Extracted text is empty")
+                raise PDFProcessingError("No readable text found in the PDF")
+                
+            return text.strip()
+            
+        except fitz.FileDataError as e:
+            logger.error(f"Invalid or corrupted PDF file: {str(e)}")
+            raise PDFProcessingError("The PDF file appears to be corrupted or invalid") from e
+        except MemoryError as e:
+            logger.error(f"Memory error while processing PDF: {str(e)}")
+            raise PDFProcessingError("Not enough memory to process the PDF file") from e
+        except Exception as e:
+            logger.error(f"Failed to process PDF: {str(e)}")
+            logger.debug(f"PDF processing error details: {traceback.format_exc()}")
+            raise PDFProcessingError("Unable to process PDF file. Please ensure it is not corrupted.") from e
+        finally:
+            if 'doc' in locals():
+                doc.close()
+
+    def extract_text_from_bytes(self, file_bytes: bytes) -> str:
+        """Extract text from PDF bytes"""
+        try:
+            with io.BytesIO(file_bytes) as file_stream:
+                pdf = pdfplumber.open(file_stream)
+                text = ""
+                for page in pdf.pages:
+                    text += page.extract_text() or ""
+                return text.strip()
+        except Exception as e:
+            logger.error(f"Error extracting text from PDF bytes: {str(e)}")
+            raise
+
 class DOCXProcessor(DocumentProcessor):
     """Processor for DOCX documents."""
     
-    @staticmethod
-    def extract_text(docx_file) -> str:
-        """
-        Extract text from uploaded DOCX with enhanced error handling
-        
-        Args:
-            docx_file: StreamIO object containing DOCX data
-            
-        Returns:
-            str: Extracted text from DOCX
-            
-        Raises:
-            DOCXProcessingError: If DOCX is corrupted or cannot be processed
-        """
-        if not docx_file:
-            logger.error("No DOCX file provided")
-            raise DOCXProcessingError("No DOCX file was provided")
-
+    def extract_text(self, file) -> str:
+        """Extract text from DOCX file"""
         try:
-            # Validate file size
-            docx_file.seek(0, 2)  # Seek to end
-            file_size = docx_file.tell()
-            docx_file.seek(0)  # Reset to beginning
-            
-            # 100MB limit
-            if file_size > 100 * 1024 * 1024:
-                logger.error(f"DOCX file too large: {file_size / (1024*1024):.2f}MB")
-                raise DOCXProcessingError("DOCX file size exceeds 100MB limit")
-
-            # Load the document
-            doc = Document(docx_file)
-            
-            # Extract text from paragraphs
-            text = []
-            for paragraph in doc.paragraphs:
-                if paragraph.text.strip():
-                    text.append(paragraph.text)
-                    
-            # Extract text from tables
-            for table in doc.tables:
-                for row in table.rows:
-                    for cell in row.cells:
-                        if cell.text.strip():
-                            text.append(cell.text)
-            
-            # Join all text with newlines
-            full_text = '\n'.join(text).strip()
-            
-            if not full_text:
-                logger.warning("Extracted text is empty")
-                raise DOCXProcessingError("No readable text found in the DOCX")
-                
-            return full_text
-            
+            doc = Document(file)
+            return "\n".join([paragraph.text for paragraph in doc.paragraphs])
         except Exception as e:
-            logger.error(f"Failed to process DOCX: {str(e)}")
-            logger.debug(f"DOCX processing error details: {traceback.format_exc()}")
-            raise DOCXProcessingError("Unable to process DOCX file. Please ensure it is not corrupted.") from e
+            logger.error(f"Error extracting text from DOCX: {str(e)}")
+            raise
+
+    def extract_text_from_bytes(self, file_bytes: bytes) -> str:
+        """Extract text from DOCX bytes"""
+        try:
+            with io.BytesIO(file_bytes) as file_stream:
+                doc = Document(file_stream)
+                return "\n".join([paragraph.text for paragraph in doc.paragraphs])
+        except Exception as e:
+            logger.error(f"Error extracting text from DOCX bytes: {str(e)}")
+            raise

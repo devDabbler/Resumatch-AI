@@ -111,7 +111,7 @@ class JobMatcher:
                 if config_role_name.lower() == role_name.lower():
                     role_config = config
                     break
-                    
+                
             if not role_config:
                 available_roles = list(self.config.get('job_roles', {}).keys())
                 logger.error(f"Role '{role_name}' not found in configuration. Available roles: {available_roles}")
@@ -129,7 +129,11 @@ class JobMatcher:
             # Process required skills
             required_skills = role_config.get('required_skills', [])
             for skill in required_skills:
+                # Handle both string and dictionary skill formats
                 skill_name = skill if isinstance(skill, str) else skill.get('name')
+                if not skill_name:
+                    continue
+                    
                 skill_match = self._analyze_skill(skill_name, text_lower, text)
                 if skill_match['matched']:
                     matches['required'].append(skill_name)
@@ -138,17 +142,24 @@ class JobMatcher:
                         'skill': skill_name,
                         'type': 'required',
                         'context': skill_match['context'],
-                        'confidence': skill_match['confidence']
+                        'confidence': skill_match['confidence'],
+                        'min_years': skill.get('min_years', 0) if isinstance(skill, dict) else 0,
+                        'context_requirement': skill.get('context', '') if isinstance(skill, dict) else ''
                     })
 
             # Process preferred skills
             for skill in role_config.get('preferred_skills', []):
-                skill_match = self._analyze_skill(skill, text_lower, text)
+                # Handle both string and dictionary skill formats
+                skill_name = skill if isinstance(skill, str) else skill.get('name')
+                if not skill_name:
+                    continue
+                    
+                skill_match = self._analyze_skill(skill_name, text_lower, text)
                 if skill_match['matched']:
-                    matches['preferred'].append(skill)
-                    matches['context'][skill] = skill_match['context']
+                    matches['preferred'].append(skill_name)
+                    matches['context'][skill_name] = skill_match['context']
                     matches['skill_details'].append({
-                        'skill': skill,
+                        'skill': skill_name,
                         'type': 'preferred',
                         'context': skill_match['context'],
                         'confidence': skill_match['confidence']
@@ -455,7 +466,7 @@ class JobMatcher:
             }
 
     def _calculate_experience_score(self, text: str, role_config: Dict) -> float:
-        """Calculate experience score with enhanced context awareness"""
+        """Calculate experience score with reduced variance."""
         try:
             min_years = role_config.get('min_years_experience', 0)
             
@@ -465,77 +476,86 @@ class JobMatcher:
             # Calculate weighted years based on location and experience type
             weights = self.config['scoring_config']['experience_weights']
             
-            # Weight US vs non-US experience with extreme difference
+            # Weight US vs non-US experience with reduced difference
             location_weighted_years = (
                 exp_details['us_years'] * weights['us_experience'] +
-                exp_details['non_us_years'] * weights['non_us_experience'] * 0.2  # Further reduced from 0.3 to 0.2
+                exp_details['non_us_years'] * weights['non_us_experience'] * 0.4  # Was 0.2
             )
             
-            # Weight professional vs academic/internship experience with extreme difference
+            # Weight professional vs academic/internship experience with reduced penalties
             type_weighted_years = (
                 exp_details['professional_years'] * weights.get('professional_multiplier', 1.0) +
-                exp_details['academic_years'] * weights.get('academic_multiplier', 0.1) +  # Further reduced from 0.2 to 0.1
-                exp_details['internship_years'] * weights.get('internship_multiplier', 0.02)  # Further reduced from 0.05 to 0.02
+                exp_details['academic_years'] * weights.get('academic_multiplier', 0.3) +  # Was 0.1
+                exp_details['internship_years'] * weights.get('internship_multiplier', 0.1)  # Was 0.02
             )
             
-            # Combine weighted years with extreme emphasis on professional experience
-            total_weighted_years = (location_weighted_years * 0.1) + (type_weighted_years * 0.9)  # Changed from 0.2/0.8 to 0.1/0.9
+            # Combine weighted years with reduced emphasis
+            total_weighted_years = (location_weighted_years * 0.3) + (type_weighted_years * 0.7)  # Was 0.1/0.9
             
-            # Calculate base score with extreme penalties for not meeting minimum
+            # Calculate base score with reduced penalties
             if total_weighted_years >= min_years:
                 base_score = 1.0
             else:
-                # Progressive penalty: larger gap = exponentially lower score
+                # Reduced power for gap ratio penalty
                 gap_ratio = total_weighted_years / min_years
-                base_score = math.pow(gap_ratio, 5)  # Increased from 4th to 5th power for even stronger penalty
+                base_score = math.pow(gap_ratio, 2)  # Was 5
             
-            # Apply additional penalties
+            # Apply more moderate penalties
             penalties = 1.0
             
-            # Significant shortfall penalty (more than 30% below minimum)
+            # Significant shortfall penalty with higher floor
             if total_weighted_years < (min_years * 0.7):
-                penalties *= 0.2  # Increased penalty from 0.3 to 0.2 (80% penalty)
+                penalties *= 0.8  # Was 0.4
             
-            # Mostly academic/internship penalty with tiered approach
+            # Professional experience ratio with reduced penalties
             if exp_details['total_years'] > 0:
                 professional_ratio = exp_details['professional_years'] / exp_details['total_years']
-                if professional_ratio < 0.8:  # Increased threshold from 0.7 to 0.8
-                    penalties *= 0.4  # Increased penalty from 0.5 to 0.4 (60% penalty)
-                if professional_ratio < 0.6:  # Additional tier
-                    penalties *= 0.6  # Additional 40% penalty
-                if professional_ratio < 0.4:  # Additional tier for very low professional experience
-                    penalties *= 0.5  # Additional 50% penalty
+                if professional_ratio < 0.8:
+                    penalties *= 0.9  # Was 0.6
+                if professional_ratio < 0.6:
+                    penalties *= 0.9  # Was 0.7
             
-            # Non-US experience penalty with tiered approach
-            if exp_details['us_years'] < (min_years * 0.8):  # Increased threshold from 0.7 to 0.8
-                penalties *= 0.5  # Increased penalty from 0.6 to 0.5 (50% penalty)
-            if exp_details['us_years'] < (min_years * 0.5):  # Additional tier
-                penalties *= 0.7  # Additional 30% penalty
+            # Non-US experience penalty with reduced impact
+            if exp_details['us_years'] < (min_years * 0.8):
+                penalties *= 0.7  # Was 0.5
+            if exp_details['us_years'] < (min_years * 0.5):
+                penalties *= 0.8  # Was 0.7
             
             # Calculate final score
             final_score = base_score * penalties
             
-            # Apply context multipliers from config with minimal academic weight
+            # Apply context multipliers with reduced penalties
             if exp_details['context'] == 'enterprise':
                 final_score *= self.config['scoring_config']['context_weights']['enterprise']
             elif exp_details['context'] == 'research':
-                final_score *= self.config['scoring_config']['context_weights']['research'] * 0.4  # Further reduced from 0.6 to 0.4
+                final_score *= self.config['scoring_config']['context_weights']['research'] * 0.6  # Was 0.4
             elif exp_details['context'] == 'academic':
-                final_score *= self.config['scoring_config']['context_weights']['academic'] * 0.3  # Further reduced from 0.5 to 0.3
+                final_score *= self.config['scoring_config']['context_weights']['academic'] * 0.5  # Was 0.3
             
-            # Additional penalties for early career and academic focus
+            # Early career and academic focus penalties with higher floors
             if exp_details['total_years'] < 2:
-                final_score *= 0.5  # Increased penalty from 0.7 to 0.5 (50% penalty for very early career)
+                final_score *= 0.7  # Was 0.5
             
             if exp_details['academic_years'] > exp_details['professional_years']:
-                final_score *= 0.6  # New 40% penalty when academic years exceed professional years
+                final_score *= 0.8  # Was 0.6
             
-            # Additional penalty for insufficient professional experience
-            if exp_details['professional_years'] < min_years * 0.5:
-                final_score *= 0.7  # New 30% penalty for insufficient professional experience
+            # Floor for strong matches to reduce variance
+            if final_score >= 0.9:
+                final_score = 0.9 + ((final_score - 0.9) * 0.3)
             
             return min(1.0, final_score)
             
         except Exception as e:
             logger.error(f"Experience score calculation failed: {str(e)}")
             return 0.0
+
+    def _normalize_score(self, score: float, category: str) -> float:
+        """Normalize scores to reduce variance within categories."""
+        if category == "strong_match":
+            if score >= 90:
+                # Compress scores between 90-100 less aggressively
+                return 90 + ((score - 90) * 0.8)  # Changed from 0.5 to 0.8
+        elif category == "good_match":
+            if score >= 80:
+                return 80 + ((score - 80) * 0.7)
+        return score

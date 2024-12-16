@@ -31,6 +31,29 @@ class PromptHandler:
                 logger.error(f"Failed to parse JSON response: {str(e)}")
                 return cls._create_fallback_result()
 
+            # Normalize interview questions
+            normalized_questions = []
+            raw_questions = data.get('interview_questions', [])
+            
+            if isinstance(raw_questions, list):
+                for question in raw_questions:
+                    if isinstance(question, str):
+                        normalized_questions.append(InterviewQuestion(
+                            category="Technical Implementation",
+                            question=question,
+                            context="Generated from resume analysis"
+                        ))
+                    elif isinstance(question, dict):
+                        normalized_questions.append(InterviewQuestion(
+                            category=question.get('category', 'Technical Implementation'),
+                            question=question.get('question', question.get('text', '')),
+                            context=question.get('context', 'Generated from resume analysis')
+                        ))
+                    else:
+                        logger.warning(f"Unexpected question format: {type(question)}")
+            else:
+                logger.warning(f"Unexpected interview_questions format: {type(raw_questions)}")
+
             # Convert to AnalysisResult
             try:
                 result = AnalysisResult(
@@ -38,7 +61,7 @@ class PromptHandler:
                     recommendation=data.get('recommendation', 'NO_MATCH'),
                     skills_assessment=data.get('skills_assessment', []),
                     technical_gaps=data.get('technical_gaps', []),
-                    interview_questions=data.get('interview_questions', []),
+                    interview_questions=normalized_questions,  # Use normalized questions
                     key_findings=data.get('key_findings', []),
                     concerns=data.get('concerns', []),
                     confidence_score=data.get('confidence_score', 0.0)
@@ -64,7 +87,7 @@ class PromptHandler:
                 InterviewQuestion(
                     category="General Technical",
                     question="Please describe your technical background and experience",
-                    context="Fallback question due to analysis failure"
+                    context="Fallback question due to processing error"
                 )
             ],
             key_findings=["Analysis failed - manual review required"],
@@ -338,34 +361,37 @@ Return ONLY a valid JSON object."""
         for project in insights['projects']:
             if project['technologies'] and project['impact']:
                 questions.append({
-                    'type': 'technical_depth',
+                    'category': 'Technical Implementation',
                     'question': f"In {project['description']}, you used {', '.join(project['technologies'])} "
                               f"to achieve {project['impact']}. Could you elaborate on:\n"
                               f"- The specific technical challenges you faced\n"
                               f"- Your architecture decisions and trade-offs\n"
-                              f"- How you measured and validated the impact?"
+                              f"- How you measured and validated the impact?",
+                    'context': project['context']
                 })
 
         # Technology usage questions
         for usage in insights['tech_usage']:
             if usage['depth_signals']:
                 questions.append({
-                    'type': 'implementation',
+                    'category': 'Technical Proficiency',
                     'question': f"Your experience with {usage['tech']} shows {usage['depth_signals'][0]}. "
                               f"Can you discuss:\n"
                               f"- How you handled {usage['challenges'][0] if usage['challenges'] else 'technical challenges'}\n"
                               f"- Your approach to {usage['patterns'][0] if usage['patterns'] else 'implementation'}\n"
-                              f"- What you learned that you'd do differently?"
+                              f"- What you learned that you'd do differently?",
+                    'context': usage.get('context', 'Technical implementation details')
                 })
 
         # Gap exploration questions
         for gap in insights['gaps']:
             questions.append({
-                'type': 'gap_assessment',
+                'category': 'Skill Assessment',
                 'question': f"I notice {gap['description']}. Could you address:\n"
                           f"- Your exposure to {gap['missing_element']}\n"
                           f"- How your experience with {gap['related_skills']} applies\n"
-                          f"- Your approach to bridging this gap?"
+                          f"- Your approach to bridging this gap?",
+                'context': 'Gap analysis'
             })
 
         return questions
