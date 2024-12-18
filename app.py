@@ -23,41 +23,53 @@ st.set_page_config(
 st.markdown("""
     <style>
         .block-container {
-            max-width: 1000px;  /* Limit maximum width */
-            padding-top: 2rem;
-            padding-bottom: 2rem;
+            max-width: 1200px;  /* Increased from 1000px */
+            padding-top: 1rem;  /* Reduced from 2rem */
+            padding-bottom: 1rem;  /* Reduced from 2rem */
         }
         .stButton > button {
             width: 100%;
         }
         /* Make columns more compact */
         .stColumn {
-            padding: 0 0.5rem;
+            padding: 0 1rem;  /* Reduced from 1.5rem */
         }
         /* Adjust container margins */
         .element-container {
-            margin: 0.5rem 0;
+            margin: 0.8rem 0;  /* Reduced from 1.5rem */
         }
         /* Make text inputs more compact */
         .stTextInput > div > div > input {
-            padding: 0.5rem;
+            padding: 0.8rem;  /* Reduced from 1.5rem */
         }
         /* Adjust file uploader size */
         .stFileUploader > div {
-            padding: 1rem;
+            padding: 0.8rem;  /* Reduced from 1.5rem */
         }
         /* Make markdown text more compact */
         .stMarkdown {
-            margin: 0.5rem 0;
+            margin: 0.8rem 0;  /* Reduced from 1.5rem */
         }
         /* Adjust header margins */
         h1, h2, h3 {
-            margin: 0.5rem 0;
+            margin: 0.8rem 0;  /* Reduced from 1.5rem */
         }
         /* Make success/info/warning messages more compact */
         .stAlert {
-            padding: 0.5rem;
-            margin: 0.5rem 0;
+            padding: 0.8rem;  /* Reduced from 1.5rem */
+            margin: 0.8rem 0;  /* Reduced from 1.5rem */
+        }
+        /* Increase width of selectbox */
+        .stSelectbox {
+            min-width: 100%;
+        }
+        /* Make selectbox container wider */
+        [data-testid="stSelectbox"] {
+            width: 100%;
+        }
+        /* Adjust spacing between sections */
+        [data-testid="stVerticalBlock"] > div {
+            margin-bottom: 0.8rem;  /* Reduced spacing between sections */
         }
     </style>
 """, unsafe_allow_html=True)
@@ -650,17 +662,19 @@ def chat_page():
         primary_file = st.file_uploader("Upload Primary Resume", type=['pdf', 'docx'], key='primary_upload')
         if primary_file:
             # Save the file temporarily
-            with open(f"temp_{primary_file.name}", "wb") as f:
+            temp_path = f"temp_{primary_file.name}"
+            with open(temp_path, "wb") as f:
                 f.write(primary_file.getvalue())
-            st.session_state.primary_resume = f"temp_{primary_file.name}"
+            st.session_state.primary_resume = temp_path
             
     with col2:
         comparison_file = st.file_uploader("Upload Comparison Resume (Optional)", type=['pdf', 'docx'], key='comparison_upload')
         if comparison_file:
             # Save the file temporarily
-            with open(f"temp_{comparison_file.name}", "wb") as f:
+            temp_path = f"temp_{comparison_file.name}"
+            with open(temp_path, "wb") as f:
                 f.write(comparison_file.getvalue())
-            st.session_state.comparison_resume = f"temp_{comparison_file.name}"
+            st.session_state.comparison_resume = temp_path
             
     # Job role selection
     job_roles = list(config['job_roles'].keys())
@@ -671,46 +685,29 @@ def chat_page():
     st.subheader("Chat Interface")
     
     if st.session_state.primary_resume:
-        # Extract text from primary resume
-        primary_text = resume_extractor.extract_text(Path(st.session_state.primary_resume))
-        
-        # Extract text from comparison resume if available
-        comparison_text = None
-        comparison_name = None
-        if st.session_state.comparison_resume:
-            comparison_text = resume_extractor.extract_text(Path(st.session_state.comparison_resume))
-            # Extract name from first line
-            comparison_name = comparison_text.split('\n')[0].strip()
-        
-        # Chat input
-        user_query = st.text_input("Ask a question about the resume(s)")
-        
-        if user_query:
-            with st.spinner("Processing your query..."):
-                response = chat_handler.chat(
-                    query=user_query,
-                    resume_text=primary_text,
-                    job_title=st.session_state.job_role,
-                    comparison_resume=comparison_text,
-                    comparison_name=comparison_name
-                )
-                st.write("Response:", response)
-                
-        # Example queries
-        st.subheader("Example Queries")
-        examples = [
-            "What skills are missing in this resume for the current role?",
-            "What are the candidate's strongest qualifications?",
-            "How many years of relevant experience does the candidate have?",
-        ]
-        if comparison_text:
-            examples.append(f"Compare this candidate with {comparison_name}.")
+        try:
+            # Extract text from primary resume
+            primary_text = resume_extractor.extract_text(st.session_state.primary_resume)
+            if not primary_text:
+                st.error("Failed to extract text from primary resume")
+                return
             
-        for example in examples:
-            if st.button(example):
+            # Extract text from comparison resume if available
+            comparison_text = None
+            comparison_name = None
+            if st.session_state.comparison_resume:
+                comparison_text = resume_extractor.extract_text(st.session_state.comparison_resume)
+                if comparison_text:
+                    # Extract name from first line
+                    comparison_name = comparison_text.split('\n')[0].strip()
+            
+            # Chat input
+            user_query = st.text_input("Ask a question about the resume(s)")
+            
+            if user_query:
                 with st.spinner("Processing your query..."):
                     response = chat_handler.chat(
-                        query=example,
+                        query=user_query,
                         resume_text=primary_text,
                         job_title=st.session_state.job_role,
                         comparison_resume=comparison_text,
@@ -718,15 +715,41 @@ def chat_page():
                     )
                     st.write("Response:", response)
                     
-        # Clear conversation button
-        if st.button("Clear Conversation"):
-            chat_handler.clear_conversation()
-            st.success("Conversation history cleared!")
+            # Example queries
+            st.subheader("Example Queries")
+            examples = [
+                "What skills are missing in this resume for the current role?",
+                "What are the candidate's strongest qualifications?",
+                "How many years of relevant experience does the candidate have?",
+            ]
+            if comparison_text:
+                examples.append(f"Compare this candidate with {comparison_name}.")
+                
+            for example in examples:
+                if st.button(example):
+                    with st.spinner("Processing your query..."):
+                        response = chat_handler.chat(
+                            query=example,
+                            resume_text=primary_text,
+                            job_title=st.session_state.job_role,
+                            comparison_resume=comparison_text,
+                            comparison_name=comparison_name
+                        )
+                        st.write("Response:", response)
+                        
+            # Clear conversation button
+            if st.button("Clear Conversation"):
+                chat_handler.clear_conversation()
+                st.success("Conversation history cleared!")
+                
+        except Exception as e:
+            logger.error(f"Error in chat interface: {str(e)}")
+            st.error(f"An error occurred: {str(e)}")
             
     else:
         st.info("Please upload a primary resume to start chatting.")
         
-    # Cleanup temporary files
+    # Cleanup temporary files on session end
     def cleanup_temp_files():
         if st.session_state.primary_resume:
             try:
@@ -738,6 +761,12 @@ def chat_page():
                 os.remove(st.session_state.comparison_resume)
             except:
                 pass
+                
+    # Register cleanup
+    import atexit
+    atexit.register(cleanup_temp_files)
+
+# Rest of the file remains the same...
 
 def main():
     """Main application entry point"""
@@ -765,5 +794,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# Rest of the file remains the same...
