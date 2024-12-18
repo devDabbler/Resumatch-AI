@@ -9,14 +9,58 @@ from typing import Dict, Any, List
 import logging
 from dotenv import load_dotenv
 from utils.linkedin_validator import LinkedInValidator
+from utils.chat_handler import ChatHandler
 
 # Set page config (must be the first Streamlit command)
 st.set_page_config(
     page_title="Resumatch AI",
     page_icon="📄",
-    layout="wide",
+    layout="centered",
     initial_sidebar_state="expanded"
 )
+
+# Add custom CSS to control max width and padding
+st.markdown("""
+    <style>
+        .block-container {
+            max-width: 1000px;  /* Limit maximum width */
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+        }
+        .stButton > button {
+            width: 100%;
+        }
+        /* Make columns more compact */
+        .stColumn {
+            padding: 0 0.5rem;
+        }
+        /* Adjust container margins */
+        .element-container {
+            margin: 0.5rem 0;
+        }
+        /* Make text inputs more compact */
+        .stTextInput > div > div > input {
+            padding: 0.5rem;
+        }
+        /* Adjust file uploader size */
+        .stFileUploader > div {
+            padding: 1rem;
+        }
+        /* Make markdown text more compact */
+        .stMarkdown {
+            margin: 0.5rem 0;
+        }
+        /* Adjust header margins */
+        h1, h2, h3 {
+            margin: 0.5rem 0;
+        }
+        /* Make success/info/warning messages more compact */
+        .stAlert {
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # Import processors and analyzers
 from utils.analyzer import ResumeAnalyzer
@@ -36,6 +80,7 @@ resume_extractor = ResumeExtractor()
 pattern_matcher = PatternMatcher(resume_analyzer.config)
 experience_validator = ExperienceValidator(resume_analyzer.config)
 linkedin_validator = LinkedInValidator()
+chat_handler = ChatHandler('config/jobs.yaml')
 
 # Load environment variables
 load_dotenv()
@@ -378,15 +423,39 @@ def home_page():
         unsafe_allow_html=True
     )
 
-    # Call to action button that actually works
-    if st.button(
-        "🚀 Get Started",
-        type="primary",
-        use_container_width=True,
-        key="get_started_button"
-    ):
-        st.session_state.page = "evaluation"
-        st.rerun()
+    # Get Started section with options
+    st.markdown(
+        """
+        <div style='text-align: center; margin: 3rem 0;'>
+            <h2 style='color: #1a237e; margin-bottom: 2rem;'>Get Started</h2>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button(
+            "📝 Evaluate Resumes",
+            type="primary",
+            use_container_width=True,
+            key="evaluate_button",
+            help="Upload and analyze resumes against job requirements"
+        ):
+            st.session_state["navigation"] = "Resume Evaluation"
+            st.rerun()
+
+    with col2:
+        if st.button(
+            "💬 Chat with Resumes",
+            type="primary",
+            use_container_width=True,
+            key="chat_button",
+            help="Have an interactive conversation about your resumes"
+        ):
+            st.session_state["navigation"] = "Chat with Resume"
+            st.rerun()
 
     # Add some space at the bottom
     st.markdown("<div style='margin-bottom: 4rem;'></div>", unsafe_allow_html=True)
@@ -561,31 +630,140 @@ def evaluation_page():
         logger.error(f"[UI] Page error: {str(e)}")
         st.error("An error occurred. Please refresh the page and try again.")
 
+def chat_page():
+    """Display the chat interface for resume analysis."""
+    st.title("Chat with Resume")
+    
+    # Session state for storing uploaded resumes
+    if 'primary_resume' not in st.session_state:
+        st.session_state.primary_resume = None
+    if 'comparison_resume' not in st.session_state:
+        st.session_state.comparison_resume = None
+    if 'job_role' not in st.session_state:
+        st.session_state.job_role = None
+        
+    # File upload section
+    st.subheader("Upload Resumes")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        primary_file = st.file_uploader("Upload Primary Resume", type=['pdf', 'docx'], key='primary_upload')
+        if primary_file:
+            # Save the file temporarily
+            with open(f"temp_{primary_file.name}", "wb") as f:
+                f.write(primary_file.getvalue())
+            st.session_state.primary_resume = f"temp_{primary_file.name}"
+            
+    with col2:
+        comparison_file = st.file_uploader("Upload Comparison Resume (Optional)", type=['pdf', 'docx'], key='comparison_upload')
+        if comparison_file:
+            # Save the file temporarily
+            with open(f"temp_{comparison_file.name}", "wb") as f:
+                f.write(comparison_file.getvalue())
+            st.session_state.comparison_resume = f"temp_{comparison_file.name}"
+            
+    # Job role selection
+    job_roles = list(config['job_roles'].keys())
+    selected_role = st.selectbox("Select Job Role", job_roles, key='job_role_selector')
+    st.session_state.job_role = selected_role
+    
+    # Chat interface
+    st.subheader("Chat Interface")
+    
+    if st.session_state.primary_resume:
+        # Extract text from primary resume
+        primary_text = resume_extractor.extract_text(Path(st.session_state.primary_resume))
+        
+        # Extract text from comparison resume if available
+        comparison_text = None
+        comparison_name = None
+        if st.session_state.comparison_resume:
+            comparison_text = resume_extractor.extract_text(Path(st.session_state.comparison_resume))
+            # Extract name from first line
+            comparison_name = comparison_text.split('\n')[0].strip()
+        
+        # Chat input
+        user_query = st.text_input("Ask a question about the resume(s)")
+        
+        if user_query:
+            with st.spinner("Processing your query..."):
+                response = chat_handler.chat(
+                    query=user_query,
+                    resume_text=primary_text,
+                    job_title=st.session_state.job_role,
+                    comparison_resume=comparison_text,
+                    comparison_name=comparison_name
+                )
+                st.write("Response:", response)
+                
+        # Example queries
+        st.subheader("Example Queries")
+        examples = [
+            "What skills are missing in this resume for the current role?",
+            "What are the candidate's strongest qualifications?",
+            "How many years of relevant experience does the candidate have?",
+        ]
+        if comparison_text:
+            examples.append(f"Compare this candidate with {comparison_name}.")
+            
+        for example in examples:
+            if st.button(example):
+                with st.spinner("Processing your query..."):
+                    response = chat_handler.chat(
+                        query=example,
+                        resume_text=primary_text,
+                        job_title=st.session_state.job_role,
+                        comparison_resume=comparison_text,
+                        comparison_name=comparison_name
+                    )
+                    st.write("Response:", response)
+                    
+        # Clear conversation button
+        if st.button("Clear Conversation"):
+            chat_handler.clear_conversation()
+            st.success("Conversation history cleared!")
+            
+    else:
+        st.info("Please upload a primary resume to start chatting.")
+        
+    # Cleanup temporary files
+    def cleanup_temp_files():
+        if st.session_state.primary_resume:
+            try:
+                os.remove(st.session_state.primary_resume)
+            except:
+                pass
+        if st.session_state.comparison_resume:
+            try:
+                os.remove(st.session_state.comparison_resume)
+            except:
+                pass
+
 def main():
     """Main application entry point"""
-    logger.info("Starting Resumatch AI application")
-
-    # Initialize session state for page navigation
-    if 'page' not in st.session_state:
-        st.session_state.page = "home"
-
-    # Navigation in sidebar
-    with st.sidebar:
-        st.markdown("<h3 style='text-align: center; font-size: 1.6em;'>📍 Navigation</h3>", unsafe_allow_html=True)
-        if st.button("🏠 Home", use_container_width=True):
-            logger.info("User navigated to Home page")
-            st.session_state.page = "home"
-            st.rerun()
-        if st.button("📄 Resume Evaluation", use_container_width=True):
-            logger.info("User navigated to Resume Evaluation page")
-            st.session_state.page = "evaluation"
-            st.rerun()
-
-    # Display the appropriate page
-    if st.session_state.page == "home":
-        home_page()
-    else:
-        evaluation_page()
+    # Initialize session state
+    if "navigation" not in st.session_state:
+        st.session_state["navigation"] = "Home"
+    
+    pages = {
+        "Home": home_page,
+        "Resume Evaluation": evaluation_page,
+        "Chat with Resume": chat_page
+    }
+    
+    # Sidebar navigation
+    st.sidebar.title("Navigation")
+    selection = st.sidebar.radio("Go to", list(pages.keys()), key="nav_radio", index=list(pages.keys()).index(st.session_state["navigation"]))
+    
+    # Update navigation state if changed
+    if selection != st.session_state["navigation"]:
+        st.session_state["navigation"] = selection
+        st.rerun()
+    
+    # Display selected page
+    pages[st.session_state["navigation"]]()
 
 if __name__ == "__main__":
     main()
+
+# Rest of the file remains the same...

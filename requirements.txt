@@ -20,5 +20,5 @@ python-dateutil
 tqdm
 tenacity
 httpx
-selenium>=4.15.2
-webdriver-manager>=4.0.1
+playwright>=1.40.0
+llama-cpp-python>=0.2.20

@@ -1,25 +1,27 @@
 from typing import Dict, Tuple, List
 import re
-import time
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+import asyncio
+from playwright.async_api import async_playwright, Page
 import logging
 
 logger = logging.getLogger(__name__)
 
 class LinkedInValidator:
     def __init__(self):
-        self.chrome_options = Options()
-        self.chrome_options.add_argument('--headless')
-        self.chrome_options.add_argument('--disable-gpu')
-        self.chrome_options.add_argument('--no-sandbox')
-        self.chrome_options.add_argument('--disable-dev-shm-usage')
+        self.browser = None
+        self.context = None
         
-    def validate_profile(self, linkedin_url: str, resume_text: str) -> Tuple[bool, List[str]]:
+    async def __aenter__(self):
+        playwright = await async_playwright().start()
+        self.browser = await playwright.chromium.launch(headless=True)
+        self.context = await self.browser.new_context()
+        return self
+        
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.context.close()
+        await self.browser.close()
+    
+    async def validate_profile(self, linkedin_url: str, resume_text: str) -> Tuple[bool, List[str]]:
         """
         Validate LinkedIn profile against resume content.
         Returns (is_valid, list_of_discrepancies)
@@ -31,7 +33,7 @@ class LinkedInValidator:
             return False, ["Invalid LinkedIn URL format"]
             
         try:
-            profile_data = self._scrape_public_profile(linkedin_url)
+            profile_data = await self._scrape_public_profile(linkedin_url)
             return self._compare_with_resume(profile_data, resume_text)
         except Exception as e:
             logger.error(f"LinkedIn validation error: {str(e)}")
@@ -42,92 +44,95 @@ class LinkedInValidator:
         linkedin_pattern = r'^https?:\/\/(?:www\.)?linkedin\.com\/in\/[\w\-]+\/?$'
         return bool(re.match(linkedin_pattern, url))
     
-    def _scrape_public_profile(self, url: str) -> Dict:
+    async def _scrape_public_profile(self, url: str) -> Dict:
         """
         Scrape public LinkedIn profile data.
         Note: Only scrapes publicly available data from profile page.
         """
-        driver = webdriver.Chrome(options=self.chrome_options)
+        page = await self.context.new_page()
         try:
-            driver.get(url)
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "top-card-layout__title"))
-            )
+            await page.goto(url)
+            await page.wait_for_selector(".top-card-layout__title")
             
             profile_data = {
-                'name': self._safe_get_text(driver, ".top-card-layout__title"),
-                'headline': self._safe_get_text(driver, ".top-card-layout__headline"),
-                'experience': self._get_experience_data(driver),
-                'education': self._get_education_data(driver),
-                'skills': self._get_skills_data(driver)
+                'name': await self._safe_get_text(page, ".top-card-layout__title"),
+                'headline': await self._safe_get_text(page, ".top-card-layout__headline"),
+                'experience': await self._get_experience_data(page),
+                'education': await self._get_education_data(page),
+                'skills': await self._get_skills_data(page)
             }
             
             return profile_data
             
         finally:
-            driver.quit()
+            await page.close()
     
-    def _safe_get_text(self, driver, selector: str) -> str:
+    async def _safe_get_text(self, page: Page, selector: str) -> str:
         """Safely get text from an element, return empty string if not found."""
         try:
-            element = driver.find_element(By.CSS_SELECTOR, selector)
-            return element.text.strip()
-        except NoSuchElementException:
+            element = await page.wait_for_selector(selector, timeout=5000)
+            if element:
+                return await element.text_content()
+            return ""
+        except:
             return ""
     
-    def _get_experience_data(self, driver) -> List[Dict]:
+    async def _get_experience_data(self, page: Page) -> List[Dict]:
         """Extract experience data from LinkedIn profile."""
         experiences = []
         try:
-            exp_section = driver.find_element(By.ID, "experience-section")
-            exp_items = exp_section.find_elements(By.CLASS_NAME, "experience-item")
-            
-            for item in exp_items:
-                exp = {
-                    'title': self._safe_get_text(item, ".experience-item__title"),
-                    'company': self._safe_get_text(item, ".experience-item__subtitle"),
-                    'duration': self._safe_get_text(item, ".experience-item__duration")
-                }
-                experiences.append(exp)
+            exp_section = await page.wait_for_selector("#experience-section")
+            if exp_section:
+                exp_items = await exp_section.query_selector_all(".experience-item")
                 
-        except NoSuchElementException:
+                for item in exp_items:
+                    exp = {
+                        'title': await self._safe_get_text(item, ".experience-item__title"),
+                        'company': await self._safe_get_text(item, ".experience-item__subtitle"),
+                        'duration': await self._safe_get_text(item, ".experience-item__duration")
+                    }
+                    experiences.append(exp)
+                    
+        except:
             pass
             
         return experiences
     
-    def _get_education_data(self, driver) -> List[Dict]:
+    async def _get_education_data(self, page: Page) -> List[Dict]:
         """Extract education data from LinkedIn profile."""
         education = []
         try:
-            edu_section = driver.find_element(By.ID, "education-section")
-            edu_items = edu_section.find_elements(By.CLASS_NAME, "education__item")
-            
-            for item in edu_items:
-                edu = {
-                    'school': self._safe_get_text(item, ".education__school-name"),
-                    'degree': self._safe_get_text(item, ".education__item-degree-info"),
-                    'duration': self._safe_get_text(item, ".education__item-date-range")
-                }
-                education.append(edu)
+            edu_section = await page.wait_for_selector("#education-section")
+            if edu_section:
+                edu_items = await edu_section.query_selector_all(".education__item")
                 
-        except NoSuchElementException:
+                for item in edu_items:
+                    edu = {
+                        'school': await self._safe_get_text(item, ".education__school-name"),
+                        'degree': await self._safe_get_text(item, ".education__item-degree-info"),
+                        'duration': await self._safe_get_text(item, ".education__item-date-range")
+                    }
+                    education.append(edu)
+                    
+        except:
             pass
             
         return education
     
-    def _get_skills_data(self, driver) -> List[str]:
+    async def _get_skills_data(self, page: Page) -> List[str]:
         """Extract skills from LinkedIn profile."""
         skills = []
         try:
-            skills_section = driver.find_element(By.ID, "skills-section")
-            skill_items = skills_section.find_elements(By.CLASS_NAME, "skill-item")
-            
-            for item in skill_items:
-                skill_name = self._safe_get_text(item, ".skill-item__name")
-                if skill_name:
-                    skills.append(skill_name)
+            skills_section = await page.wait_for_selector("#skills-section")
+            if skills_section:
+                skill_items = await skills_section.query_selector_all(".skill-item")
+                
+                for item in skill_items:
+                    skill_name = await self._safe_get_text(item, ".skill-item__name")
+                    if skill_name:
+                        skills.append(skill_name)
                     
-        except NoSuchElementException:
+        except:
             pass
             
         return skills
