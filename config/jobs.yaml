@@ -1,19 +1,8 @@
-# Add this new section at the top of the file
 llm_config:
   response_format:
     schema: {
       "technical_match_score": "integer between 0-100",
       "recommendation": "one of: STRONG_MATCH, GOOD_MATCH, POTENTIAL_MATCH, NO_MATCH",
-      "skills_assessment": [
-        {
-          "skill": "skill name",
-          "proficiency": "one of: Expert, Advanced, Intermediate, Beginner",
-          "years": "years of experience (float)",
-          "context": "context from resume",
-          "confidence": "confidence score between 0-1",
-          "last_used": "YYYY-MM or Recent/Current"
-        }
-      ],
       "interview_questions": [
         {
           "category": "string (Technical Implementation|Experience Translation|Skill Gaps)",
@@ -27,7 +16,7 @@ llm_config:
       "confidence_score": "overall confidence in analysis (0-1)"
     }
   system_prompt: |
-    You are a technical resume analyzer. Your task is to analyze resumes and return ONLY a JSON response matching the provided schema. Do not include any other text or explanations.
+    You are a technical resume analyzer. Your task is to analyze resumes and return ONLY a JSON response matching the provided schema.
     
     Important rules:
     1. Return ONLY the JSON object
@@ -55,489 +44,228 @@ llm_config:
     {skills_context}
     {experience_context}
 
-    Scoring Guidelines:
-    - Score range is 0-100
-    - Strong Match (95-100): Exceeds all requirements with extensive experience
-    - Good Match (80-94): Meets all required skills with good experience
-    - Potential Match (60-79): Meets most requirements but has some gaps
-    - No Match (0-59): Missing critical requirements or insufficient experience
-
-    Return ONLY a valid JSON object matching the schema. Do not include any other text.
-
-# Analysis patterns for matching
 analysis_patterns:
   experience:
-    # Explicit year mentions (prioritize these patterns)
     - '(\d+)\+?\s*(?:years?|yrs?)(?:\s+of)?\s+(?:experience|work|professional|research)'
     - 'experience\s+of\s+(\d+)\+?\s*(?:years?|yrs?)'
-    - 'with\s+(\d+)\+?\s*(?:years?|yrs?)(?:\s+of)?\s+experience'
-    - '(\d+)\+?\s*(?:years?|yrs?)(?:\s+of)?\s+(?:industry|professional|research)'
-    - '(?:over|more\s+than)\s+(\d+)\+?\s*(?:years?|yrs?)'
-    - 'career\s+spanning\s+(\d+)\+?\s*(?:years?|yrs?)'
-    
-    # Date ranges (secondary patterns)
-    - '(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[a-z]*\.?\s+(\d{4})\s*(?:-|to|–)\s*(?:(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[a-z]*\.?\s+)?(\d{4}|\s*(?:Present|Current|Now))'
-    - '(\d{4})\s*(?:-|to|–)\s*(?:Present|Current|Now)'
     - '(?:since|from)\s+(\d{4})'
-    - '(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[a-z]*\.?\s+(\d{4})'
-  
-  location_patterns:
-    us: '\b(?:US|USA|United\s+States|California|New\s+York|Texas|Washington)\b'
-    non_us: '\b(?:India|China|Europe|Asia|Africa)\b'
-
-  skills:
-    python: '\b(?:python|py3?|python[23]|pandas|numpy|scipy|scikit|pytorch|tensorflow)\b(?:\s*(?:development|programming|coding|experience|engineer|developer|skilled at|skilled|programming|coding|development|engineering|packages?|tools?|managers?))?'
-    machine_learning: '\b(?:machine\s*learning|ml|deep\s*learning|dl|neural\s*networks?|transformer|bert|clip|stable\s*diffusion|vision\s*transformer|llm|large\s*language\s*models?|generative\s*ai)\b'
-    statistics: '\b(?:statistical|stats?|probability|regression|hypothesis\s*testing|statistical\s*analysis|mathematical|mathematics|math|quantitative)\b'
-    data_visualization: '\b(?:data\s*viz|visualization|tableau|powerbi|matplotlib|seaborn|plotly|charts?|graphs?|plotting)\b'
-    git: '\b(?:git(?:hub|lab)?|version\s*control|source\s*control)\b'
-    linear_algebra: '\b(?:linear\s*algebra|matrices|vectors|mathematical|mathematics|math|quantitative|applied\s*math)\b'
-    probability: '\b(?:probability|statistics|statistical|stochastic|random|distribution|mathematical|mathematics|math|quantitative)\b'
-    tensorflow: '\b(?:tensorflow|tf|keras|deep\s*learning|neural\s*networks?)\b'
-    pytorch: '\b(?:pytorch|torch|deep\s*learning|neural\s*networks?)\b'
-    scikit_learn: '\b(?:scikit[\s-]?learn|sklearn|machine\s*learning|ml)\b'
-    pandas: '\b(?:pandas|pd|dataframe|data\s*analysis|data\s*manipulation)\b'
-    numpy: '\b(?:numpy|np|numerical|scientific\s*computing|array)\b'
-    deep_learning: '\b(?:deep\s*learning|dl|neural\s*networks?|cnn|rnn|lstm|transformer|bert)\b'
-    langchain: '\b(?:langchain|llm\s*tools?|llm\s*framework|large\s*language\s*model\s*tools?)\b'
-    docker: '\b(?:docker|containerization|containers?|container\s*orchestration)\b'
-    kubernetes: '\b(?:kubernetes|k8s|container\s*orchestration|orchestration|aks|eks|gke)\b'
-    mlflow: '\b(?:mlflow|ml\s*flow|machine\s*learning\s*workflow|model\s*tracking)\b'
-    databricks: '\b(?:databricks|spark|big\s*data|data\s*processing)\b'
-    mapreduce: '\b(?:map\s*reduce|hadoop|distributed\s*computing|big\s*data)\b'
-    streaming: '\b(?:streaming|real[\s-]time|kafka|kinesis|pub[\s-]sub|event[\s-]driven)\b'
-    # Frontend patterns
-    javascript: '\b(?:javascript|js|ecmascript|es6|es2015|es2016|es2017|es2018|es2019|es2020|vanilla\s*js|js\s*development)\b'
-    frontend_development: '\b(?:frontend|front[\s-]end|ui|user\s*interface|client[\s-]side|web\s*frontend|browser|dom|html|css|sass|less|responsive|mobile[\s-]first|progressive\s*web\s*app|pwa|web\s*components)\b'
-    react: '\b(?:react(?:\.js)?|reactjs|react\s*native|react\s*hooks|react\s*router|react\s*redux|jsx|tsx)\b'
-    web_development: '\b(?:web\s*development|web\s*developer|web\s*engineer|web\s*application|webapp|web\s*app|website|full[\s-]stack|fullstack)\b'
-    state_management: '\b(?:redux|vuex|state|flux|context|mobx|recoil|zustand|state\s*(?:management|container|architecture|patterns|machine|flow|handling))\b'
-    rest_apis: '\b(?:rest(?:ful)?(?:\s*api)?s?|api\s*(?:development|design|architecture|integration|implementation)|web\s*services|http\s*apis|json\s*apis|microservices)\b'
-    ci_cd: '\b(?:ci/cd|continuous\s*(?:integration|deployment|delivery)|devops|build\s*pipeline|deployment\s*pipeline|jenkins|gitlab\s*ci|github\s*actions|azure\s*pipelines)\b'
-    typescript: '\b(?:typescript|ts|typed\s*javascript|type\s*system|type\s*safety)\b'
-    vue: '\b(?:vue(?:\.js)?|vuejs|vue\s*router|vuex|vue\s*cli|vue\s*components)\b'
-    node: '\b(?:node(?:\.js)?|nodejs|npm|express(?:\.js)?|nest(?:\.js)?)\b'
-    graphql: '\b(?:graphql|graph\s*ql|apollo|prisma|hasura)\b'
-
+    - '(\d{4})\s*-\s*(?:present|current|now)'
   context:
     - 'developed'
     - 'implemented'
     - 'architected'
     - 'designed'
-    - 'automated'
-    - 'optimized'
-    - 'managed'
-    - 'deployed'
-    - 'experience'
-    - 'development'
-    - 'proficient'
-    - 'expertise'
-    - 'programming'
-    - 'coding'
-    - 'engineer'
-    - 'developer'
-    - 'worked'
-    - 'using'
-    - 'familiar'
-    - 'knowledge'
     - 'built'
     - 'created'
-    - 'maintained'
-    - 'languages'
-    - 'skills'
-    - 'technical'
-    - 'stack'
-    - 'tools'
-    - 'skilled'
-    - 'developed'
-    - 'implementing'
-    - 'building'
-    - 'creating'
-    - 'responsible for'
+    - 'managed'
     - 'led'
-    - 'leading'
-    - 'architecture'
-    - 'solution'
-    - 'research'
-    - 'studied'
-    - 'published'
-    - 'paper'
-    - 'thesis'
-    - 'dissertation'
-    - 'academic'
+    - 'coordinated'
+    - 'analyzed'
+  location:
+    US: '(?:United States|USA|U\.S\.A\.|US|California|New York|Texas)'
+    non-US: '(?:India|China|Europe|Asia|Africa|South America)'
 
-# Enhanced scoring configuration
+experience_types:
+  professional:
+    - 'Senior'
+    - 'Lead'
+    - 'Staff'
+    - 'Principal'
+    - 'Architect'
+    - 'Manager'
+    - 'Engineer'
+    - 'Developer'
+  internship:
+    - 'Intern'
+    - 'Internship'
+    - 'Co-op'
+    - 'Trainee'
+  academic:
+    - 'Research'
+    - 'Project'
+    - 'Thesis'
+    - 'Academic'
+    - 'Course'
+    - 'Study'
+
 scoring_config:
+  semantic_threshold: 0.45
   experience_weights:
     us_experience: 1.0
     non_us_experience: 0.6
-    professional_multiplier: 1.0
-    academic_multiplier: 0.4
-    internship_multiplier: 0.2
-    
-  context_weights:
-    enterprise: 1.0
-    research: 0.4
-    academic: 0.3
-    
-  skill_context_multipliers:
-    production: 1.0
-    enterprise: 0.9
-    research: 0.4
-    academic: 0.3
+    professional: 1.0
+    internship: 0.25
+    academic: 0.15
 
-  skill_weights:
-    required: 0.7
-    preferred: 0.3
-    bonus: 0.1
-    penalty: 0.2
-
-  location_patterns:
-    us: '\b(?:US|USA|United\s+States|California|New\s+York|Texas|Washington)\b'
-    non_us: '\b(?:India|China|Europe|Asia|Africa)\b'
-    
-  experience_patterns:
-    professional: 
-      - 'years?\s+(?:of)?\s+(?:professional|industry|work)\s+experience'
-      - 'senior|lead|principal|architect'
-    academic:
-      - 'research|thesis|dissertation|phd|postdoc'
-      - 'teaching\s+assistant|research\s+assistant'
-    internship:
-      - 'intern|internship|summer|co-op'
-
-# Job role definitions remain unchanged
-job_roles:
-  "Data Scientist":
-    role_type: technical
-    min_years_experience: 5
-    scoring_constraints:
-      max_score: 100
-      required_skills_threshold: 0.7
-      experience_weight: 0.4
-      skills_weight: 0.3
-      location_weight: 0.2
-      context_weight: 0.1
-      
-    required_skills:
-      - name: "Python"
-        min_years: 3
-        context: "production"
-      - name: "Machine Learning"
-        min_years: 3
-        context: "enterprise"
-      - name: "Statistics"
-        min_years: 2
-        context: "analysis"
-      - name: "Data Visualization"
-        min_years: 2
-        context: "analysis"
-      - name: "Git"
-        min_years: 1
-        context: "development"
-    
-    preferred_skills:
-      - name: "Deep Learning"
-        min_years: 1
-        context: "research"
-      - name: "MLOps"
-        min_years: 1
-        context: "production"
-      - name: "Cloud Platforms"
-        min_years: 1
-        context: "production"
-      - name: "Spark"
-        min_years: 1
-        context: "production"
-      - name: "Docker"
-        min_years: 1
-        context: "production"
-
-    skill_requirements:
-      Python:
-        min_years: 3
-        context: "production"
-      "Machine Learning":
-        min_years: 3
-        context: "enterprise"
-
-  "Software Development Engineer":
-    role_type: technical
-    min_years_experience: 5
-    scoring_constraints:
-      max_score: 100
-      required_skills_threshold: 0.7
-      experience_weight: 0.4
-      skills_weight: 0.3
-      location_weight: 0.2
-      context_weight: 0.1
-      
-    skill_context_requirements:
-      production_code: 0.7
-      enterprise_systems: 0.6
-      
-    required_skills:
-      - name: "JavaScript"
-        min_years: 3
-        context: "production"
-      - name: "React"
-        min_years: 2
-        context: "enterprise"
-      # Add other skills similarly
-
-# Add skill variations configuration section
 skill_variations:
   python:
-    aliases: ['py', 'python3', 'python2', 'pythonic', 'pandas', 'sklearn']
+    aliases: ['py', 'python3', 'python2', 'pythonic']
     forms: ['programming', 'development', 'scripting']
   javascript:
-    aliases: ['js', 'ecmascript', 'node.js', 'nodejs']
-    forms: ['frontend', 'development']
-  machine_learning:
-    aliases: [
-      'ml', 'machine-learning', 'ml/ai', 'ai/ml', 
-      'llm', 'llms', 'llm tuning', 'deep learning',
-      'neural networks', 'ai', 'artificial intelligence'
-    ]
-    forms: ['algorithms', 'models', 'systems']
-  artificial_intelligence:
-    aliases: ['ai', 'artificial-intelligence']
-    forms: ['deep learning', 'neural networks']
-  statistics:
-    aliases: [
-      'statistical', 'stats', 'stat', 'statistical analysis',
-      'physics', 'mathematical physics', 'quantitative analysis'
-    ]
-    forms: ['analysis', 'modeling', 'inference']
-  data_visualization:
-    aliases: [
-      'data viz', 'dataviz', 'data-viz', 'visualization',
-      'charts', 'graphs', 'plotting', 'matplotlib'
-    ]
-    forms: ['charts', 'graphs', 'dashboards']
-  git:
-    aliases: ['github', 'gitlab', 'version control', 'source control']
-    forms: ['repository', 'versioning']
-  sql:
-    aliases: ['mysql', 'postgresql', 'tsql', 'plsql', 'database']
-    forms: ['querying', 'databases']
-  deep_learning:
-    aliases: [
-      'dl', 'deep-learning', 'neural networks',
-      'llm', 'llms', 'transformer', 'transformers'
-    ]
-    forms: ['models', 'architectures']
-  tensorflow:
-    aliases: ['tf', 'tensorflow2', 'tf.keras']
-    forms: ['framework', 'library']
-  pytorch:
-    aliases: ['torch', 'pytorch', 'deep learning framework']
-    forms: ['framework', 'library']
-  nlp:
-    aliases: ['natural language processing', 'text analytics', 'text mining']
-    forms: ['processing', 'understanding']
-  data_analysis:
-    aliases: ['data analytics', 'data analyst', 'data science']
-    forms: ['analysis', 'insights']
-  aws:
-    aliases: ['amazon web services', 'amazon aws', 'cloud']
-    forms: ['services', 'platform']
-  docker:
-    aliases: ['containerization', 'containers']
-    forms: ['deployment', 'packaging']
-  kubernetes:
-    aliases: ['k8s', 'container orchestration']
-    forms: ['orchestration', 'deployment']
-  ci_cd:
-    aliases: ['continuous integration', 'continuous deployment', 'devops']
-    forms: ['pipeline', 'automation']
-  api:
-    aliases: ['rest api', 'restful', 'web services']
-    forms: ['endpoints', 'services']
-  linux:
-    aliases: ['unix', 'bash', 'shell scripting']
-    forms: ['operating system', 'environment']
-  linear_algebra:
-    aliases: [
-      'linear algebra', 'matrices', 'vectors', 'mathematical physics',
-      'physics', 'quantum mechanics'
-    ]
-    forms: ['analysis', 'computation']
-  probability:
-    aliases: [
-      'probabilistic', 'stochastic', 'statistical physics',
-      'physics', 'quantum mechanics'
-    ]
-    forms: ['theory', 'modeling']
-  scikit_learn:
-    aliases: ['sklearn', 'scikit-learn', 'scikit']
-    forms: ['ml library', 'machine learning library']
+    aliases: ['js', 'es6', 'ecmascript', 'node.js', 'nodejs']
+    forms: ['frontend', 'backend', 'fullstack']
+  java:
+    aliases: ['core java', 'j2ee', 'jvm']
+    forms: ['backend', 'enterprise']
 
-# Add tech stack groupings
-tech_stacks:
-  frontend:
-    parent: "JavaScript"
-    children: [
-      "React", "Vue", "Angular",
-      "HTML5", "CSS3", "TypeScript",
-      "Redux", "Webpack", "Babel"
-    ]
-  backend:
-    parent: "Python"
-    children: [
-      "Django", "Flask", "FastAPI",
-      "SQLAlchemy", "Celery", "uWSGI"
-    ]
-  ml_stack:
-    parent: "Machine Learning"
-    children: [
-      "TensorFlow", "PyTorch", "Scikit-learn",
-      "Pandas", "NumPy", "Keras"
-    ]
-
-# Add quality check patterns
-quality_checks:
-  typos:
-    penalty: 0.1  # 10% penalty per typo
-    max_penalty: 0.3  # Cap at 30% total penalty
-    patterns:
-      - '[A-Z][A-Z]+[a-z]'  # Incorrect capitalization
-      - '\s[a-z](?=\s|\.)'  # Uncapitalized words
-      - '[\.,]\w'  # Missing space after punctuation
-      - '\s+[\.,]'  # Space before punctuation
-      - '([A-Za-z])\1{2,}'  # Repeated characters
-
-  grammar:
-    penalty: 0.15
-    max_penalty: 0.4
-    patterns:
-      - 'i\s+(?![A-Z])'  # Uncapitalized "I"
-      - '\s+(is|are|was|were)\s+been\s'
-      - '\s+have\s+had\s+been\s'
-
-# Add context patterns for tech usage
-tech_context_patterns:
-  implementation: [
-    'implemented using {tech}',
-    'built with {tech}',
-    'developed in {tech}',
-    'using {tech} to'
-  ]
-  architecture: [
-    'architected {tech}',
-    'designed {tech}',
-    '{tech} architecture'
-  ]
-  optimization: [
-    'optimized {tech}',
-    'improved {tech}',
-    'enhanced {tech}'
-  ]
-  integration: [
-    'integrated {tech}',
-    'connected {tech}',
-    '{tech} integration'
-  ]
-
-# Update interview questions templates
-interview_questions:
-  # Context-based technical questions
-  technical_depth: [
-    "In your {project}, you used {tech} for {context}. Can you elaborate on:
-     - The specific challenges you faced
-     - Your implementation approach
-     - How you measured success?",
-    "Your experience with {tech} seems focused on {context}. How did you handle:
-     - Performance optimization
-     - Error handling
-     - Testing strategy?",
-    "I see you used {tech} with {related_tech}. Could you explain:
-     - Why you chose this combination
-     - Integration challenges
-     - Lessons learned?"
-  ]
-
-  # Architecture/design questions
-  system_design: [
-    "For your {project} project that used {tech}:
-     - What were the key architectural decisions?
-     - How did you handle scalability?
-     - What would you do differently now?",
-    "When implementing {feature} with {tech}:
-     - How did you structure the solution?
-     - What alternatives did you consider?
-     - How did you validate your approach?"
-  ]
-
-  # Impact/results questions
-  business_impact: [
-    "Your work on {project} using {tech} seems interesting:
-     - What business metrics did it improve?
-     - How did you measure success?
-     - What was the long-term impact?",
-    "In your role at {company}, you led {feature} development:
-     - What was the business driver?
-     - How did you prioritize requirements?
-     - What was the ROI?"
-  ]
-
-  # Gap exploration
-  gap_assessment: [
-    "While you have strong {tech} skills, I notice less experience with {missing_tech}:
-     - Have you had any exposure to it?
-     - How would you approach learning it?
-     - What similar technologies have you used?",
-    "Your {tech} experience seems primarily in {context} rather than {required_context}:
-     - How would you adapt your skills?
-     - What challenges do you anticipate?
-     - How would you bridge this gap?"
-  ]
-
-  # Quality concerns
-  quality_focus: [
-    "Regarding {quality_issue} in your experience with {tech}:
-     - How do you ensure code quality?
-     - What's your testing approach?
-     - How do you handle code reviews?",
-    "I notice {issue_type} in your description of {project}:
-     - What's your attention to detail strategy?
-     - How do you validate your work?
-     - What tools do you use for quality?"
-  ]
-
-analysis_patterns:
-  project_patterns:
-    - role: '(?:led|managed|developed|architected)\s+([^.]+)'
-    - impact: '(?:improved|increased|reduced|optimized)\s+([^.]+)\s+by\s+(\d+)%'
-    - scale: 'handling\s+(\d+(?:K|M|B)?)\s+(?:users|requests|transactions)'
+job_roles:
+  Data Scientist:
+    required_skills:
+      - Python
+      - Machine Learning
+      - Data Analysis
+      - Statistics
+      - SQL
+    preferred_skills:
+      - Deep Learning
+      - TensorFlow/PyTorch
+      - Big Data
+      - Cloud Platforms
+      - Data Visualization
     
-  tech_usage_patterns:
-    implementation:
-      - 'using\s+({tech})\s+(?:to|for)\s+([^.]+)'
-      - 'implemented\s+([^.]+)\s+with\s+({tech})'
-    architecture:
-      - 'designed\s+([^.]+)\s+using\s+({tech})'
-      - 'architected\s+([^.]+)\s+with\s+({tech})'
-    optimization:
-      - 'optimized\s+([^.]+)\s+using\s+({tech})'
-      - 'improved\s+([^.]+)\s+with\s+({tech})'
+  Software Development Engineer:
+    required_skills:
+      - Java/Python/C++
+      - Data Structures
+      - Algorithms
+      - System Design
+      - Git
+    preferred_skills:
+      - Cloud Services
+      - Microservices
+      - CI/CD
+      - Testing
+      - Agile
 
-  skill_gap_analysis:
-    critical_gaps:
-      - missing_core: "Missing core skill {skill} required for {role}"
-      - version_mismatch: "Experience with older version of {tech}"
-      - context_mismatch: "Used {tech} in {context} but need {required_context}"
-    potential_gaps:
-      - depth: "Limited depth in {skill} for {requirement}"
-      - recency: "No recent experience with {tech} (last used: {last_used})"
-      - scale: "Experience scale mismatch for {tech} ({current} vs {required})"
+  Full Stack Software Engineer:
+    required_skills:
+      - JavaScript/TypeScript
+      - React/Angular/Vue
+      - Node.js
+      - SQL/NoSQL
+      - RESTful APIs
+    preferred_skills:
+      - Cloud Platforms
+      - DevOps
+      - GraphQL
+      - Docker
+      - Web Security
 
-  insight_patterns:
-    strengths:
-      - leadership: 'led\s+team\s+of\s+(\d+)'
-      - impact: 'reduced\s+(\w+)\s+by\s+(\d+)%'
-      - innovation: 'designed\s+new\s+(\w+)'
-    weaknesses:
-      - job_hopping: 'average_tenure < 1.5 years'
-      - skill_decay: 'no_recent_usage > 2 years'
-      - context_mismatch: 'academic_vs_industry'
+  UI Designer:
+    required_skills:
+      - UI/UX Design
+      - Figma/Sketch
+      - HTML/CSS
+      - Design Systems
+      - Prototyping
+    preferred_skills:
+      - User Research
+      - Motion Design
+      - Adobe Creative Suite
+      - Design Thinking
+      - Accessibility
+
+  Engagement Manager:
+    required_skills:
+      - Project Management
+      - Client Relations
+      - Team Leadership
+      - Communication
+      - Problem Solving
+    preferred_skills:
+      - Agile/Scrum
+      - Risk Management
+      - Business Analysis
+      - Change Management
+      - Stakeholder Management
+
+  ML Ops Engineer:
+    required_skills:
+      - Python
+      - Docker
+      - Kubernetes
+      - CI/CD
+      - ML Frameworks
+    preferred_skills:
+      - Cloud Platforms
+      - Monitoring Tools
+      - Infrastructure as Code
+      - Model Serving
+      - Data Pipeline
+
+  Solutions Architect:
+    required_skills:
+      - System Design
+      - Cloud Architecture
+      - Security
+      - Integration
+      - Technical Leadership
+    preferred_skills:
+      - Multi-cloud
+      - Microservices
+      - Cost Optimization
+      - Performance Tuning
+      - Enterprise Architecture
+
+  AWS Platform Data Engineer:
+    required_skills:
+      - AWS Services
+      - Python/Java
+      - SQL/NoSQL
+      - ETL Pipelines
+      - Data Modeling
+    preferred_skills:
+      - Spark
+      - Airflow
+      - Terraform
+      - Data Lakes
+      - Data Warehousing
+
+  Site Reliability Engineer:
+    required_skills:
+      - Linux/Unix
+      - Monitoring
+      - Automation
+      - Cloud Platforms
+      - Incident Response
+    preferred_skills:
+      - Kubernetes
+      - Infrastructure as Code
+      - Performance Tuning
+      - Security
+      - Load Balancing
+
+  Generative AI Architect:
+    required_skills:
+      - Deep Learning
+      - NLP
+      - Python
+      - LLM Integration
+      - Model Deployment
+    preferred_skills:
+      - Prompt Engineering
+      - Model Fine-tuning
+      - MLOps
+      - Vector Databases
+      - RAG Systems
+
+# Interview question templates for different categories
+interview_questions:
+  technical_implementation:
+    - template: "Can you describe how you used {skill} in {context}? What were the specific challenges and how did you overcome them?"
+    - template: "Walk me through a specific project where you applied {skill}. What was your role and what was the outcome?"
+  skill_depth:
+    - template: "You mention extensive experience with {skill} in {context}. Can you elaborate on the most complex problem you solved using this technology?"
+    - template: "What are some best practices you've developed while working with {skill} based on {context}?"
+  gap_assessment:
+    - template: "While you have strong experience in {related_skill}, I notice {missing_skill} isn't mentioned. How would you approach learning and applying this skill?"
+    - template: "Can you discuss any indirect experience or transferable skills you have that would help you quickly adapt to working with {missing_skill}?"
+  project_impact:
+    - template: "During your time at {company}, what was the business impact of your {project} using {skill}?"
+    - template: "Can you quantify the results of your work on {project} at {company}?"
+  linkedin_verification:
+    - template: "Your LinkedIn profile strongly aligns with your resume. Could you elaborate on how you maintain consistency across your professional profiles?"
+    - template: "Your LinkedIn endorsements validate your expertise. Can you share a specific example that demonstrates your proficiency?"
+  linkedin_discrepancies:
+    - template: "I notice some differences between your resume and LinkedIn profile. Could you help me understand these variations?"
+    - template: "There are some experiences mentioned in your LinkedIn profile that aren't in your resume. Could you tell me more about your role in these positions?"

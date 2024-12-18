@@ -1,32 +1,44 @@
 import streamlit as st
 import yaml
-import json
-import logging
-import traceback
-from utils.pdf import PDFProcessor, DOCXProcessor
-from utils.matcher import JobMatcher
-from utils.llm import LLMAnalyzer
-from utils.report_generator import ReportGenerator
-from utils.schemas import AnalysisResult
-from utils.parallel_processor import ParallelProcessor
-from typing import Dict, Any
-from dotenv import load_dotenv
-from utils.logging_config import setup_logging
 from pathlib import Path
+import os
+import json
+import traceback
 from functools import partial
+from typing import Dict, Any, List
+import logging
+from dotenv import load_dotenv
+from utils.linkedin_validator import LinkedInValidator
 
-# Initialize logging configuration
-setup_logging()
-logger = logging.getLogger('app')
+# Set page config (must be the first Streamlit command)
+st.set_page_config(
+    page_title="Resumatch AI",
+    page_icon="📄",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Import processors and analyzers
+from utils.analyzer import ResumeAnalyzer
+from utils.extractor import ResumeExtractor
+from utils.matcher import PatternMatcher
+from utils.validator import ExperienceValidator
+from utils.parallel_processor import ParallelProcessor
+from utils.schemas import AnalysisResult, InterviewQuestion
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Initialize processors
+resume_analyzer = ResumeAnalyzer('config/jobs.yaml')
+resume_extractor = ResumeExtractor()
+pattern_matcher = PatternMatcher(resume_analyzer.config)
+experience_validator = ExperienceValidator(resume_analyzer.config)
+linkedin_validator = LinkedInValidator()
 
 # Load environment variables
 load_dotenv()
-
-# Initialize global components for parallel processing
-pdf_processor = PDFProcessor()
-docx_processor = DOCXProcessor()
-job_matcher = JobMatcher('config/jobs.yaml')
-llm_analyzer = LLMAnalyzer()
 
 def load_config() -> Dict:
     """Load job configuration"""
@@ -38,13 +50,27 @@ def load_config() -> Dict:
         logger.error(f"Failed to load configuration: {str(e)}")
         raise
 
+# Initialize configuration
+CONFIG_PATH = Path("config/jobs.yaml")
+with open(CONFIG_PATH) as f:
+    config = yaml.safe_load(f)
+
 def display_interview_questions(questions):
     """Helper function to display interview questions in a consistent format"""
+    from utils.schemas import InterviewQuestion
+    
     for i, question in enumerate(questions, 1):
-        if isinstance(question, dict):
-            category = question.get('category', 'Technical')
-            q_text = question.get('question', '')
-            context = question.get('context', '')
+        if isinstance(question, (dict, InterviewQuestion)):
+            # Get attributes safely whether it's a dict or InterviewQuestion
+            if isinstance(question, dict):
+                category = question.get('category', 'Technical')
+                q_text = question.get('question', '')
+                context = question.get('context', '')
+            else:  # InterviewQuestion
+                category = question.category
+                q_text = question.question
+                context = question.context
+                
             st.markdown(
                 f"""
                 <div style='margin-bottom: 1.2rem; padding: 0.8rem;
@@ -67,103 +93,58 @@ def display_interview_questions(questions):
                 """,
                 unsafe_allow_html=True
             )
-            
-def display_results(analysis_results: AnalysisResult):
+
+def display_results(result):
     """Display analysis results in a structured format."""
     try:
-        # Validate input
-        if not isinstance(analysis_results, AnalysisResult):
-            logger.error(f"[UI] Invalid analysis_results type: {type(analysis_results)}")
-            st.error("Invalid analysis results")
-            return
-
         # Display match score and recommendation
-        try:
-            score = analysis_results.technical_match_score
-            recommendation = analysis_results.recommendation.value
-            if recommendation == "STRONG_MATCH":
-                st.success("✅ Strong Match - Proceed with Recruiter Screen")
-                color = "#28a745"
-            elif recommendation == "GOOD_MATCH":
-                st.success("👍 Good Match - Consider for Interview")
-                color = "#28a745"
-            elif recommendation == "POTENTIAL_MATCH":
-                st.info("🤔 Potential Match - Review Further")
-                color = "#17a2b8"
-            else:
-                st.warning("⚠️ Not a Match")
-                color = "#ffc107"
+        score = result.technical_match_score
+        recommendation = result.recommendation
+        if recommendation == "STRONG_MATCH":
+            st.success("✅ Strong Match - Proceed with Recruiter Screen")
+            color = "#28a745"
+        elif recommendation == "GOOD_MATCH":
+            st.success("👍 Good Match - Consider for Interview")
+            color = "#28a745"
+        elif recommendation == "POTENTIAL_MATCH":
+            st.info("🤔 Potential Match - Review Further")
+            color = "#17a2b8"
+        else:
+            st.warning("⚠️ Not a Match")
+            color = "#ffc107"
 
-            # Score display
-            st.markdown(
-                f"""
-                <div style='text-align: center; padding: 1rem; margin-bottom: 1rem;'>
-                    <h2 style='color: {color}; font-size: 2em;'>Match Score: {score}%</h2>
-                    <div style='background: #e9ecef; border-radius: 10px; height: 20px; width: 100%;'>
-                        <div style='background: {color}; width: {score}%; height: 100%; border-radius: 10px;'></div>
-                    </div>
+        # Score display
+        st.markdown(
+            f"""
+            <div style='text-align: center; padding: 1rem; margin-bottom: 1rem;'>
+                <h2 style='color: {color}; font-size: 2em;'>Match Score: {score}%</h2>
+                <div style='background: #e9ecef; border-radius: 10px; height: 20px; width: 100%;'>
+                    <div style='background: {color}; width: {score}%; height: 100%; border-radius: 10px;'></div>
                 </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        except Exception as e:
-            logger.error(f"[UI] Error displaying score: {str(e)}")
-            st.error("Error displaying match score")
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
         # Display sections
-        try:
-            if analysis_results.key_findings:
-                st.markdown("### 🎯 Key Findings")
-                for finding in analysis_results.key_findings:
-                    st.markdown(f"• {finding}")
+        if result.key_findings:
+            st.markdown("### 🎯 Key Findings")
+            for finding in result.key_findings:
+                st.markdown(f"• {finding}")
 
-            if analysis_results.skills_assessment:
-                st.markdown("### 💡 Skills Assessment")
-                skills_data = []
-                for skill in analysis_results.skills_assessment:
-                    skills_data.append({
-                        "Skill": skill.skill,
-                        "Level": skill.proficiency,
-                        "Years": skill.years
-                    })
-                if skills_data:
-                    st.dataframe(skills_data, use_container_width=True)
+        if result.technical_gaps:
+            st.markdown("### ⚠️ Technical Gaps")
+            for gap in result.technical_gaps:
+                st.markdown(f"• {gap}")
 
-            if analysis_results.technical_gaps:
-                st.markdown("### ⚠️ Technical Gaps")
-                for gap in analysis_results.technical_gaps:
-                    st.markdown(f"• {gap}")
+        if result.interview_questions:
+            st.markdown("### 💬 Recommended Interview Questions")
+            display_interview_questions(result.interview_questions)
 
-            if analysis_results.interview_questions:
-                st.markdown("### 💬 Recommended Interview Questions")
-                for i, question in enumerate(analysis_results.interview_questions, 1):
-                    if isinstance(question, str):
-                        st.markdown(f"{i}. {question}")
-                    else:  # InterviewQuestion object
-                        category = question.category
-                        q_text = question.question
-                        context = question.context or ""
-                        st.markdown(
-                            f"""
-                            <div style='margin-bottom: 1.2rem; padding: 0.8rem; 
-                                  background-color: #f8f9fa; border-radius: 5px;'>
-                                <strong>{i}. {category}</strong><br/>
-                                {q_text}<br/>
-                                <em style='color: #6c757d; font-size: 0.9em;'>{context}</em>
-                            </div>
-                            """,
-                            unsafe_allow_html=True
-                        )
-
-            if analysis_results.concerns:
-                st.markdown("### ⚠️ Areas of Concern")
-                for concern in analysis_results.concerns:
-                    st.markdown(f"• {concern}")
-
-        except Exception as e:
-            logger.error(f"[UI] Error displaying sections: {str(e)}")
-            st.error("Error displaying analysis sections")
+        if result.concerns:
+            st.markdown("### ⚠️ Areas of Concern")
+            for concern in result.concerns:
+                st.markdown(f"• {concern}")
 
     except Exception as e:
         logger.error(f"[UI] Display error: {str(e)}")
@@ -179,16 +160,25 @@ def process_resume(resume_path: Path, job_role: str = None) -> Dict[str, Any]:
         file_extension = resume_path.suffix.lower()
         
         # Extract text based on file type
-        if file_extension == '.pdf':
-            text = pdf_processor.extract_text_from_path(str(resume_path))
-        elif file_extension in ['.docx', '.doc']:
-            text = docx_processor.extract_text(str(resume_path))
-        else:
-            raise ValueError(f"Unsupported file type: {file_extension}")
+        try:
+            if file_extension == '.pdf':
+                text = resume_analyzer.extract_text_from_path(str(resume_path))
+            elif file_extension in ['.docx', '.doc']:
+                text = resume_extractor.extract_text(str(resume_path))
+            else:
+                raise ValueError(f"Unsupported file type: {file_extension}")
+            
+            if not text or len(text.strip()) == 0:
+                raise ValueError("No text could be extracted from the resume")
+                
+        except Exception as extract_error:
+            logger.error(f"Text extraction failed for {filename}: {str(extract_error)}")
+            logger.error(f"Extraction error traceback: {traceback.format_exc()}")
+            raise ValueError(f"Failed to extract text from resume: {str(extract_error)}")
         
         # Process skills with detailed logging
         try:
-            skills = job_matcher.match_skills(text, job_role)
+            skills = pattern_matcher.match_skills(text, job_role)
         except Exception as skills_error:
             logger.error(f"Skills matching failed for {filename}: {str(skills_error)}")
             logger.error(f"Skills error traceback: {traceback.format_exc()}")
@@ -196,15 +186,26 @@ def process_resume(resume_path: Path, job_role: str = None) -> Dict[str, Any]:
         
         # Process experience with detailed logging
         try:
-            experience = job_matcher.extract_experience(text)
+            experience = pattern_matcher.extract_experience(text)
         except Exception as exp_error:
             logger.error(f"Experience extraction failed for {filename}: {str(exp_error)}")
             logger.error(f"Experience error traceback: {traceback.format_exc()}")
             experience = {}
         
+        # Get LinkedIn URL if provided
+        linkedin_url = st.session_state.get('linkedin_url', '')
+        
+        # Validate LinkedIn profile if URL is provided
+        if linkedin_url:
+            is_valid, discrepancies = linkedin_validator.validate_profile(linkedin_url, text)
+            if not is_valid:
+                st.warning("LinkedIn profile validation failed:")
+                for discrepancy in discrepancies:
+                    st.write(f"- {discrepancy}")
+        
         # LLM Analysis with detailed logging
         try:
-            analysis_dict = llm_analyzer.analyze_resume(text, job_role, skills, experience)
+            analysis_dict = experience_validator.analyze_resume(text, job_role, skills, experience)
         except Exception as analysis_error:
             logger.error(f"LLM analysis failed for {filename}: {str(analysis_error)}")
             logger.error(f"Analysis error traceback: {traceback.format_exc()}")
@@ -212,7 +213,6 @@ def process_resume(resume_path: Path, job_role: str = None) -> Dict[str, Any]:
             analysis_dict = {
                 'technical_match_score': 0,
                 'recommendation': 'NO_MATCH',
-                'skills_assessment': [],
                 'technical_gaps': ['Unable to analyze resume'],
                 'interview_questions': [{
                     'category': 'Technical Implementation',
@@ -226,12 +226,25 @@ def process_resume(resume_path: Path, job_role: str = None) -> Dict[str, Any]:
         
         # Create AnalysisResult with detailed validation
         try:
+            from utils.schemas import InterviewQuestion
+            
+            # Convert interview questions to proper objects
+            interview_questions = []
+            for q in analysis_dict.get('interview_questions', []):
+                if isinstance(q, dict):
+                    interview_questions.append(InterviewQuestion(
+                        category=q.get('category', 'Technical'),
+                        question=q.get('question', ''),
+                        context=q.get('context', '')
+                    ))
+                elif isinstance(q, InterviewQuestion):
+                    interview_questions.append(q)
+            
             analysis_result = AnalysisResult(
                 technical_match_score=analysis_dict.get('technical_match_score', 0),
                 recommendation=analysis_dict.get('recommendation', 'NO_MATCH'),
-                skills_assessment=analysis_dict.get('skills_assessment', []),
                 technical_gaps=analysis_dict.get('technical_gaps', []),
-                interview_questions=analysis_dict.get('interview_questions', []),
+                interview_questions=interview_questions,
                 key_findings=analysis_dict.get('key_findings', []),
                 concerns=analysis_dict.get('concerns', []),
                 confidence_score=analysis_dict.get('confidence_score', 0.0),
@@ -243,19 +256,22 @@ def process_resume(resume_path: Path, job_role: str = None) -> Dict[str, Any]:
             logger.error(f"Validation error traceback: {traceback.format_exc()}")
             logger.error(f"Raw analysis dict: {json.dumps(analysis_dict, indent=2)}")
             
+            # Create fallback InterviewQuestion
+            fallback_question = InterviewQuestion(
+                category='Technical Implementation',
+                question='Please describe your technical background and experience',
+                context='Fallback question due to processing error'
+            )
+            
             analysis_result = AnalysisResult(
                 technical_match_score=0,
                 recommendation="NO_MATCH",
-                skills_assessment=[],
                 technical_gaps=["Error processing resume"],
-                interview_questions=[{
-                    'category': 'Technical Implementation',
-                    'question': 'Please describe your technical background and experience',
-                    'context': 'Fallback question due to processing error'
-                }],
+                interview_questions=[fallback_question],
                 key_findings=["Analysis failed - manual review required"],
-                concerns=["Unable to automatically assess qualifications"],
-                confidence_score=0.0
+                concerns=["Unable to automatically assess technical qualifications"],
+                confidence_score=0.0,
+                experience_details=None
             )
         
         return {
@@ -306,7 +322,7 @@ def home_page():
                     Smart Matching
                 </h3>
                 <p style='color: #666;'>
-                    AI-powered skill matching and candidate evaluation
+                    AI-powered candidate evaluation
                 </p>
             </div>
             <div style='text-align: center; padding: 2rem;
@@ -412,6 +428,13 @@ def evaluation_page():
             )
             st.session_state['selected_role'] = selected_role
 
+            # LinkedIn URL input
+            linkedin_url = st.text_input(
+                "LinkedIn Profile URL (optional)",
+                help="Enter the candidate's LinkedIn profile URL for additional validation"
+            )
+            st.session_state['linkedin_url'] = linkedin_url
+
             # File upload
             st.markdown("### 📎 Upload Resumes")
             uploaded_files = st.file_uploader(
@@ -487,7 +510,7 @@ def evaluation_page():
                                         
                                     logger.info("Analysis type: %s", type(analysis))
                                     logger.info("Analysis fields:")
-                                    for field in ['technical_match_score', 'recommendation', 'skills_assessment', 
+                                    for field in ['technical_match_score', 'recommendation',
                                                 'technical_gaps', 'interview_questions', 'key_findings', 
                                                 'concerns', 'experience_details', 'analysis_timestamp', 
                                                 'confidence_score']:
@@ -501,6 +524,7 @@ def evaluation_page():
                                         failed_results.append(result)
                                     else:
                                         failed_results.append({'filename': 'Unknown', 'error': str(e)})
+
                             # Sort results by match score
                             successful_results.sort(
                                 key=lambda x: x['analysis'].technical_match_score if x.get('analysis') else 0,
@@ -540,12 +564,6 @@ def evaluation_page():
 def main():
     """Main application entry point"""
     logger.info("Starting Resumatch AI application")
-    st.set_page_config(
-        page_title="Resumatch AI",
-        page_icon="📄",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
 
     # Initialize session state for page navigation
     if 'page' not in st.session_state:
