@@ -61,6 +61,23 @@ analysis_patterns:
     - 'led'
     - 'coordinated'
     - 'analyzed'
+    - 'researched'
+    - 'published'
+    - 'authored'
+    - 'contributed'
+    - 'optimized'
+    - 'improved'
+    - 'enhanced'
+    - 'deployed'
+    - 'trained'
+    - 'evaluated'
+    - 'experimented'
+    - 'investigated'
+    - 'studied'
+    - 'collaborated'
+    - 'mentored'
+    - 'taught'
+    - 'presented'
   location:
     US: '(?:United States|USA|U\.S\.A\.|US|California|New York|Texas)'
     non-US: '(?:India|China|Europe|Asia|Africa|South America)'
@@ -89,53 +106,127 @@ experience_types:
     - 'Study'
 
 scoring_config:
-  semantic_threshold: 0.45
+  semantic_threshold: 0.55
+  base_weights:
+    required_skills: 0.75
+    preferred_skills: 0.25
+  context_weights:
+    skill_context: 0.8
+    experience_context: 0.2
   experience_weights:
     us_experience: 1.0
     non_us_experience: 0.6
     professional: 1.0
-    internship: 0.25
-    academic: 0.15
+    internship: 0.2
+    academic: 0.25
+    research: 0.35
+  skill_match_boost: 1.15
 
 skill_variations:
   python:
     aliases: ['py', 'python3', 'python2', 'pythonic']
-    forms: ['programming', 'development', 'scripting']
-  javascript:
-    aliases: ['js', 'es6', 'ecmascript', 'node.js', 'nodejs']
-    forms: ['frontend', 'backend', 'fullstack']
-  java:
-    aliases: ['core java', 'j2ee', 'jvm']
-    forms: ['backend', 'enterprise']
+    forms: ['programming', 'development', 'scripting', 'coding']
+  machine_learning:
+    aliases: ['ml', 'machine-learning', 'ml/ai', 'artificial intelligence', 'ai', 'predictive modeling', 'supervised learning', 'unsupervised learning']
+    forms: ['algorithms', 'models', 'prediction', 'classification', 'clustering']
+  data_analysis:
+    aliases: ['data analytics', 'data science', 'data mining', 'statistical analysis']
+    forms: ['analysis', 'analytics', 'insights', 'research']
+  statistics:
+    aliases: ['statistical', 'stats', 'probability', 'mathematical', 'quantitative', 'regression', 'hypothesis testing', 'statistical modeling']
+    forms: ['analysis', 'modeling', 'inference', 'methods']
+  sql:
+    aliases: ['mysql', 'postgresql', 'database', 'db']
+    forms: ['querying', 'database management']
+  tensorflow:
+    aliases: ['tf', 'tensorflow2', 'tensorflow1', 'keras']
+    forms: ['deep learning', 'neural networks', 'machine learning']
+  pytorch:
+    aliases: ['torch', 'pytorch1', 'pytorch2']
+    forms: ['deep learning', 'neural networks', 'machine learning']
+  tensorflow_pytorch:
+    aliases: ['tensorflow', 'tf', 'pytorch', 'torch', 'keras', 'deep learning frameworks']
+    forms: ['implementation', 'development', 'training']
+  hadoop:
+    aliases: ['hadoop ecosystem', 'hdfs', 'mapreduce']
+    forms: ['big data', 'distributed computing']
+  spark:
+    aliases: ['pyspark', 'apache spark', 'spark streaming']
+    forms: ['big data', 'distributed computing']
+  big_data:
+    aliases: ['hadoop', 'spark', 'distributed computing', 'data processing', 'large-scale data', 'mapreduce', 'data pipeline']
+    forms: ['analytics', 'engineering', 'infrastructure']
+  aws:
+    aliases: ['amazon web services', 'amazon aws', 'aws cloud']
+    forms: ['cloud computing', 'cloud services']
+  azure:
+    aliases: ['microsoft azure', 'azure cloud']
+    forms: ['cloud computing', 'cloud services']
+  gcp:
+    aliases: ['google cloud', 'google cloud platform']
+    forms: ['cloud computing', 'cloud services']
+  cloud_platforms:
+    aliases: ['aws', 'azure', 'gcp', 'google cloud', 'amazon web services', 'microsoft azure', 'cloud computing', 'cloud infrastructure']
+    forms: ['services', 'deployment', 'development']
+  deep_learning:
+    aliases: ['dl', 'neural networks', 'deep neural networks', 'dnn', 'cnn', 'rnn', 'lstm', 'transformers']
+    forms: ['ai', 'machine learning', 'modeling', 'architectures']
+  data_visualization:
+    aliases: ['data viz', 'visualization', 'dashboards', 'tableau', 'power bi']
+    forms: ['reporting', 'charts', 'graphs']
 
 job_roles:
   Data Scientist:
+    total_experience: 5
     required_skills:
-      - Python
-      - Machine Learning
-      - Data Analysis
-      - Statistics
-      - SQL
+      - name: "python"
+        min_years: 3
+      - name: "machine learning"
+        min_years: 3
+      - name: "data analysis"
+        min_years: 2
+      - name: "sql"
+        min_years: 1
     preferred_skills:
-      - Deep Learning
-      - TensorFlow/PyTorch
-      - Big Data
-      - Cloud Platforms
-      - Data Visualization
-    
-  Software Development Engineer:
+      - name: "deep learning"
+        min_years: 1
+      - name: "tensorflow"
+        min_years: 1
+      - name: "pytorch"
+        min_years: 1
+      - name: "scikit-learn"
+        min_years: 1
+    scoring_constraints:
+      experience_weight: 0.35
+      skills_weight: 0.45
+      location_weight: 0.10
+      context_weight: 0.10
+
+  Software Engineer:
+    total_experience: 5
     required_skills:
-      - Java/Python/C++
-      - Data Structures
-      - Algorithms
-      - System Design
-      - Git
+      - name: "react"
+        min_years: 3
+      - name: "javascript"
+        min_years: 3
+      - name: "sql"
+        min_years: 1
+      - name: "git"
+        min_years: 1
     preferred_skills:
-      - Cloud Services
-      - Microservices
-      - CI/CD
-      - Testing
-      - Agile
+      - name: "python"
+        min_years: 3
+      - name: "node.js"
+        min_years: 1
+      - name: "aws"
+        min_years: 1
+      - name: "docker"
+        min_years: 1
+    scoring_constraints:
+      experience_weight: 0.35
+      skills_weight: 0.45
+      location_weight: 0.10
+      context_weight: 0.10
 
   Full Stack Software Engineer:
     required_skills:
